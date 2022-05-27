@@ -1,0 +1,12 @@
+{
+  "name": "openpage",
+  "version": "1.0.0",
+  "description": "Open a page to run test",
+  "dependencies": {
+    "clang-format": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "playwright": "1.17.1",
+    "systeminformation": "^4.26.4",
+    "yargs": "^16.2.0"
+  }
+}

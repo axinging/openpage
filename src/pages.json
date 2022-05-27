@@ -1,0 +1,12 @@
+[
+  {
+    "url": "https://127.0.0.1:8080/tfjs/e2e/benchmarks/local-benchmark/?task=performance&benchmark=bodypix&architecture=MobileNetV1&inputType=image&inputSize=0.25&backend=wasm&WEBGL_USE_SHAPES_UNIFORMS=true&CHECK_COMPUTATION_FOR_ERRORS=false&warmup=0&run=10&profile=0&localBuild=webgl,webgpu,core&CANVAS2D_WILL_READ_FREQUENTLY=false",
+    "repeat": 10,
+    "tag": "read_false"
+  },
+  {
+    "url": "https://127.0.0.1:8080/tfjs/e2e/benchmarks/local-benchmark/?task=performance&benchmark=bodypix&architecture=MobileNetV1&inputType=image&inputSize=0.25&backend=wasm&WEBGL_USE_SHAPES_UNIFORMS=true&CHECK_COMPUTATION_FOR_ERRORS=false&warmup=0&run=10&profile=0&localBuild=webgl,webgpu,core&CANVAS2D_WILL_READ_FREQUENTLY=true",
+    "repeat": 10,
+    "tag": "read_true"
+  }
+]
