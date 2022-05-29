@@ -1,20 +1,23 @@
 [
   {
-    "url": [
-      "https://127.0.0.1:8080/tfjs/e2e/benchmarks/local-benchmark/?task=performance&WEBGL_USE_SHAPES_UNIFORMS=true&CHECK_COMPUTATION_FOR_ERRORS=false&warmup=0&run=10&profile=0&localBuild=webgl,webgpu,core&inputType=image&benchmark=bodypix&architecture=MobileNetV1"
-    ],
-    "inputSize": [
-      0.25,
-      0.5,
-      0.75
-    ],
-    "CANVAS2D_WILL_READ_FREQUENTLY": [
-      false,
-      true
-    ],
-    "backend": [
-      "wasm",
-      "cpu"
-    ]
+    "urlinfo": {
+      "url": [
+        "https://127.0.0.1:8080/tfjs/e2e/benchmarks/local-benchmark/?task=performance&WEBGL_USE_SHAPES_UNIFORMS=true&CHECK_COMPUTATION_FOR_ERRORS=false&warmup=0&run=10&profile=0&localBuild=webgl,webgpu,core&inputType=image&benchmark=bodypix&architecture=MobileNetV1"
+      ],
+      "inputSize": [
+        0.25
+      ],
+      "CANVAS2D_WILL_READ_FREQUENTLY": [
+        false,
+        true
+      ],
+      "backend": [
+        "webgpu"
+      ]
+    },
+    "runinfo": {
+      "repeat": 10,
+      "endtag": "allPredictEnd"
+    }
   }
 ]

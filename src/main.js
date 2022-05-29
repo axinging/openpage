@@ -67,12 +67,12 @@ function cartesianProduct(arr) {
   }, [[]])
 }
 
-async function getURLFromCartesianProductJSON() {
-  const fsasync = require('fs').promises;
-  const pagesJson = JSON.parse(await fsasync.readFile('pages_comb.json'));
-  const singleTest = pagesJson[0];
+async function runURL(dataJson) {
+  const repeat = dataJson["runinfo"]["repeat"];
+  const endTag = dataJson["runinfo"]["endtag"];
+  const pagesJson = dataJson["urlinfo"];
+  const singleTest = pagesJson;
   const keys = Object.keys(singleTest);
-  console.log(keys);
   const values = Object.values(singleTest);
   console.log(values);
   const cartesianProductArray = cartesianProduct(values);
@@ -83,12 +83,24 @@ async function getURLFromCartesianProductJSON() {
       url += keys[j] + '=' + cartesianProductArray[i][j] + '&';
     }
     urls.push(url.replace(`${keys[0]}=`, ''));
+    const finalUrl = url.replace(`${keys[0]}=`, '');
+    await runSingleBenchmark({"repeat":repeat, "url":finalUrl});
   }
   console.log(urls);
 }
 
+async function getURLFromCartesianProductJSON() {
+  const fsasync = require('fs').promises;
+  const allDataJson = JSON.parse(await fsasync.readFile('pages_comb.json'));
+  for (let i =0 ; i < allDataJson.length;i++) {
+    await runURL(allDataJson[i]);
+  }
+
+}
+
 (async function() {
   const jsonType = args.jsontype;
+  const email = args.email;
   console.log(jsonType+ ", Please add allPredictEnd to your case.");
   if (jsonType != 'flat') {
     await getURLFromCartesianProductJSON();
@@ -99,15 +111,18 @@ async function getURLFromCartesianProductJSON() {
       await runSingleBenchmark(pagesJson[i]);
     }
   }
-  await sendMail('xing.xu@intel.com', "Will Read Test id done");
+  if(email&& email!='') {
+    await sendMail(email, "Will Read Test id done");
+  }
 })();
 
 async function sendMail(to, subject, html = '') {
-  let from = 'xing.xu@intel.com';
+  let from = to;
+  var domain = from.substring(from.lastIndexOf("@") +1);
 
   const nodemailer = require('nodemailer');
   let transporter = nodemailer.createTransport({
-    host: 'ecsmtp.sh.intel.com',
+    host: `ecsmtp.sh.${domain}`,
     port: 25,
     secure: false,
     auth: false,
