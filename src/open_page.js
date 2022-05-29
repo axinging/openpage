@@ -34,9 +34,10 @@ function log(info, logFile) {
 }
 
 async function startContext(exitCondition, logFile, tracingFile = '') {
-  let browserArgs ='';
+  let browserArgs =`--disable-dawn-features=disallow_unsafe_apis  --enable-unsafe-webgpu`;
   /*
-      `--disable-dawn-features=disallow_unsafe_apis  --enable-dawn-features=record_detailed_timing_in_trace_events,disable_timestamp_query_conversion --enable-unsafe-webgpu --enable-tracing=disabled-by-default-gpu.dawn  --trace-startup-file=${
+  --enable-dawn-features=record_detailed_timing_in_trace_events,disable_timestamp_query_conversion 
+  --enable-tracing=disabled-by-default-gpu.dawn  --trace-startup-file=${
           tracingFile} --trace-startup-format=json`;
   */
   console.log(browserArgs);

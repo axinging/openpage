@@ -2,6 +2,7 @@
 
 const openPage = require('./open_page.js');
 const fs = require('fs');
+const args = require('yargs').argv;
 
 function padZero(str) {
   return ('0' + str).slice(-2);
@@ -42,9 +43,9 @@ async function runSingleBenchmark(benchmarkObject) {
   console.log(benchmarkObject['tag1']);
   let logDir;
   if (benchmarkObject['tag1'] != null) {
-    logDir = __dirname + '\\' + benchmarkObject['tag'];
+    logDir = __dirname + '\\out\\' + benchmarkObject['tag'];
   } else {
-    logDir = __dirname + '\\' + getTagFromURL(url);
+    logDir = __dirname + '\\out\\' + getTagFromURL(url);
   }
   for (let i = 0; i < repeat; i++) {
     const timestamp = getTimestamp('second');
@@ -87,7 +88,8 @@ async function getURLFromCartesianProductJSON() {
 }
 
 (async function() {
-  const [jsonType, url] = getArgs();
+  const jsonType = args.jsontype;
+  console.log(jsonType+ ", Please add allPredictEnd to your case.");
   if (jsonType != 'flat') {
     await getURLFromCartesianProductJSON();
   } else {
@@ -97,23 +99,32 @@ async function getURLFromCartesianProductJSON() {
       await runSingleBenchmark(pagesJson[i]);
     }
   }
+  await sendMail('xing.xu@intel.com', "Will Read Test id done");
 })();
 
-function getArgs() {
-  const myArgs = process.argv.slice(2);
-  let jsonType = 'flat';
-  let url = '';
-  switch (myArgs[0]) {
-    case '--jsontype':
-      jsonType = myArgs[1];
-      console.log(jsonType);
-      break;
-    case '--url':
-      url = myArgs[1];
-      console.log(url);
-      break;
-    default:
-      console.log('Error parameters');
-  }
-  return [jsonType, url];
+async function sendMail(to, subject, html = '') {
+  let from = 'xing.xu@intel.com';
+
+  const nodemailer = require('nodemailer');
+  let transporter = nodemailer.createTransport({
+    host: 'ecsmtp.sh.intel.com',
+    port: 25,
+    secure: false,
+    auth: false,
+  });
+
+  transporter.verify(error => {
+    if (error)
+      console.log('transporter error: '+error);
+    else
+      console.log('Email was sent!');
+  });
+
+  let info = await transporter.sendMail({
+    from: from,
+    to: to,
+    subject: subject,
+    html: html,
+  });
+  return Promise.resolve();
 }
