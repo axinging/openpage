@@ -25,14 +25,7 @@ function processUrls(urls, localBuild) {
   }
 }
 
-function getURLState(url) {
-  let params = new URLSearchParams(url);
-  return params;
-}
-
-async function loadTFJS() {
-  const urlState = getURLState(location.search);
-
+async function loadTFJS_(localBuild) {
   let urls = [
     'tfjs-core/dist/tf-core.js',
     'tfjs-backend-cpu/dist/tf-backend-cpu.js',
@@ -44,14 +37,19 @@ async function loadTFJS() {
     'tfjs-automl/dist/tf-automl.js',
   ];
 
-  let localBuild = [];
-  if (urlState && urlState.has('localBuild')) {
-    localBuild = urlState.get('localBuild').split(',');
-  }
   processUrls(urls, localBuild);
 
   for (let url of urls) {
     await loadScript(url);
   }
+}
+
+async function loadTFJS() {
+  const urlState = new URLSearchParams(location.search);
+  let localBuild = [];
+  if (urlState && urlState.has('localBuild')) {
+    localBuild = urlState.get('localBuild').split(',');
+  }
+  await loadTFJS_(localBuild);
   return urlState.get('backend');
 }
