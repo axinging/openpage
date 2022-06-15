@@ -30,7 +30,7 @@ function getURLState(url) {
   return params;
 }
 
-async function setupTFJS() {
+async function loadTFJS() {
   const urlState = getURLState(location.search);
 
   let urls = [
