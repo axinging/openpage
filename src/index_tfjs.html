@@ -35,10 +35,13 @@ limitations under the License.
             t2 = tf.transpose(t, pem);
             console.log('pem: ' + pem + ", " + await t2.data());
 
-            pem = [2, 1, 0];
+            pem = [1, 0, 2];
             t2 = tf.transpose(t, pem);
             console.log('pem: ' + pem + ", " + await t2.data());
 
+            pem = [2, 1, 0];
+            t2 = tf.transpose(t, pem);
+            console.log('pem: ' + pem + ", " + await t2.data());
 
             pem = [2, 0, 1];
             t2 = tf.transpose(t, pem);
@@ -48,12 +51,12 @@ limitations under the License.
 
         async function loadTFJSDemo() {
             const urlState = new URLSearchParams(location.search);
-            let localBuild = [];
+            let localBuild = ['core','webgl','webgpu'];
             if (urlState && urlState.has('localBuild')) {
                 localBuild = urlState.get('localBuild').split(',');
             }
             await loadTFJS(localBuild);
-            return urlState.get('backend');
+            return urlState.get('backend') || 'webgpu';
         }
 
         (async function () {
