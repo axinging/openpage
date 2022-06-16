@@ -24,22 +24,40 @@ limitations under the License.
     <script>
         'use strict';
 
-        function JSONStringify(data) {
-            return data;
-        }
         async function runTFJS(backend) {
             await tf.setBackend(backend);
             await tf.ready();
             tf.env().set('WEBGPU_CPU_FORWARD', false);
             const t = tf.tensor3d([1, 11, 2, 22, 3, 33, 4, 44], [2, 2, 2]);
-            const t2 = tf.tensor3d([1, 11, 2, 22, 3, 33, 4, 44], [2, 2, 2]);
 
-            const result = tf.add(t, t2);
-            console.log(await result.data());
+            let pem, t2;
+            pem = [0, 1, 2];
+            t2 = tf.transpose(t, pem);
+            console.log('pem: ' + pem + ", " + await t2.data());
+
+            pem = [2, 1, 0];
+            t2 = tf.transpose(t, pem);
+            console.log('pem: ' + pem + ", " + await t2.data());
+
+
+            pem = [2, 0, 1];
+            t2 = tf.transpose(t, pem);
+            console.log('pem: ' + pem + ", " + await t2.data());
+            // tf.test_util.expectArraysClose(await t2.data(), [1, 11, 2, 22, 3,33,4,44]); 
+        }
+
+        async function loadTFJSDemo() {
+            const urlState = new URLSearchParams(location.search);
+            let localBuild = [];
+            if (urlState && urlState.has('localBuild')) {
+                localBuild = urlState.get('localBuild').split(',');
+            }
+            await loadTFJS(localBuild);
+            return urlState.get('backend');
         }
 
         (async function () {
-            const backend = await loadTFJS();
+            const backend = await loadTFJSDemo();
             await runTFJS(backend);
         })();
     </script>

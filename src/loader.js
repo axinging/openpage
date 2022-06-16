@@ -25,7 +25,7 @@ function processUrls(urls, localBuild) {
   }
 }
 
-async function loadTFJS_(localBuild) {
+async function loadTFJS(localBuild) {
   let urls = [
     'tfjs-core/dist/tf-core.js',
     'tfjs-backend-cpu/dist/tf-backend-cpu.js',
@@ -42,14 +42,4 @@ async function loadTFJS_(localBuild) {
   for (let url of urls) {
     await loadScript(url);
   }
-}
-
-async function loadTFJS() {
-  const urlState = new URLSearchParams(location.search);
-  let localBuild = [];
-  if (urlState && urlState.has('localBuild')) {
-    localBuild = urlState.get('localBuild').split(',');
-  }
-  await loadTFJS_(localBuild);
-  return urlState.get('backend');
 }
