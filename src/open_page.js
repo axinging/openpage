@@ -57,9 +57,9 @@ async function startContext(exitCondition, logFile, tracingFile = '') {
   });
   let page = await context.newPage();
   page.on('console', async msg => {
-    for (let i = 0; i < msg.args().length; ++i) {
-      log(`[console] ${i}: ${await msg.args()[i].jsonValue()}`, logFile);
-    }
+    //for (let i = 0; i < msg.args().length; ++i) {
+    //  log(`[console] ${i}: ${await msg.args()[i].jsonValue()}`, logFile);
+    //}
 
     if (msg._event.text[0]== '{') {
       if(logFile.startsWith('fuse')) {

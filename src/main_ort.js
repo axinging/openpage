@@ -1,7 +1,8 @@
 'use strict';
 global.results = {};
-global.results['fuse'] = {} global.results['nofuse'] = {} const openPage =
-    require('./open_page.js');
+global.results['fuse'] = {};
+global.results['nofuse'] = {};
+const openPage = require('./open_page.js');
 const fs = require('fs');
 const args = require('yargs').argv;
 
