@@ -63,9 +63,11 @@ async function startContext(exitCondition, logFile, tracingFile = '') {
 
     if (msg._event.text[0]== '{') {
       if(logFile.startsWith('fuse')) {
-        global.results['fuse'][logFile] = JSON.parse(msg._event.text);
+        const elem = logFile.split('.')[0].replace('fuse','');
+        global.results['fuse'][elem] = JSON.parse(msg._event.text);
       } else {
-        global.results['nofuse'][logFile] = JSON.parse(msg._event.text);
+        const elem = logFile.split('.')[0].replace('nofuse','');
+        global.results['nofuse'][elem] = JSON.parse(msg._event.text);
       }
     }
     let msgStr = ('' + msg.args()[0]).replace('JSHandle@', '');
