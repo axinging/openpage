@@ -1,5 +1,4 @@
 'use strict';
-
 const {chromium} = require('playwright');
 // https://github.com/axinging/webtest/blob/support_tracing3/src/open_page.js
 let logStatus = {logEnd: false};
@@ -33,8 +32,16 @@ function log(info, logFile) {
   fs.appendFileSync(logFile, String(info) + '\n');
 }
 
+async function clickDownloadButton(){
+  const [newTab] = await Promise.all([
+      this.page.waitForEvent("popup"),
+      this.waitAndClick(this.elements.button_downloadButton)
+  ]);
+  return newTab;
+}
+
 async function startContext(exitCondition, logFile, tracingFile = '') {
-  let browserArgs =`--disable-dawn-features=disallow_unsafe_apis  --enable-unsafe-webgpu`;
+  let browserArgs =`--enable-dawn-features=allow_unsafe_apis,use_dxc --enable-features=SharedArrayBuffer`;
   /*
   --enable-dawn-features=record_detailed_timing_in_trace_events,disable_timestamp_query_conversion 
   --enable-tracing=disabled-by-default-gpu.dawn  --trace-startup-file=${
@@ -54,8 +61,16 @@ async function startContext(exitCondition, logFile, tracingFile = '') {
       log(`[console] ${i}: ${await msg.args()[i].jsonValue()}`, logFile);
     }
 
+    if (msg._event.text[0]== '{') {
+      if(logFile.startsWith('fuse')) {
+        global.results['fuse'][logFile] = JSON.parse(msg._event.text);
+      } else {
+        global.results['nofuse'][logFile] = JSON.parse(msg._event.text);
+      }
+    }
     let msgStr = ('' + msg.args()[0]).replace('JSHandle@', '');
-    if (msgStr.includes('allPredictEnd')) {
+    if (msgStr.includes('ortend')) {
+
       exitCondition.logEnd = true;
     } else {
       // Unsupported.
@@ -76,6 +91,17 @@ async function openPage(url, logFile, tracingFile = '') {
   const [context, page] = await startContext(logStatus, logFile, tracingFile);
   await page.goto(url);
   await waitForCondition(logStatus);
+
+  //const downloadPromise = page.waitForEvent('download');
+  // await page.getByText('Download file').click();
+  //const download = await downloadPromise;
+  // const downloadPromise = page.waitForEvent('download');
+  // console.log("xxx 1");
+  // // await page.getByText('Download file').click();
+  // console.log("xxx 2");
+  // const download = await downloadPromise;
+  // console.log("xxx 3 " + download.suggestedFilename());
+  // await download.saveAs('./' + download.suggestedFilename());
 
   await closeContext(context);
   return logFile;
