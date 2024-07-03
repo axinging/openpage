@@ -4,7 +4,15 @@
       "url": [
         "https://10.239.47.10:8080/onnx-model-nofuse-clamp-debug56.html"
       ],
-      "inputSize": [0, 10000]
+      "inputSize": [7, 8]
+    }
+  },
+  {
+    "urlinfo": {
+      "url": [
+        "https://10.239.47.10:8080/onnx-model-nofuse-clamp-debug56.html"
+      ],
+      "inputSize": [10, 11]
     }
   }
 ]

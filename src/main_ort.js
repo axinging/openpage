@@ -43,6 +43,7 @@ async function runURL(dataJson) {
         {'repeat': 1, 'url': urls, 'logFile': 'fuse' + i + '.txt'});
     // Start waiting for download before clicking. Note no await.
   }
+  return [startValue, endValue];
 }
 
 async function getURLFromCartesianProductJSON() {
@@ -50,7 +51,13 @@ async function getURLFromCartesianProductJSON() {
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
   console.log(allDataJson.length);
   for (let i = 0; i < allDataJson.length; i++) {
-    await runURL(allDataJson[i]);
+    global.results = {};
+    global.results['fuse'] = {};
+    global.results['nofuse'] = {};
+    const [startValue, endValue] = await runURL(allDataJson[i]);
+      // console.log(global.results['fuse']);
+    fs.writeFileSync('fusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
+    fs.writeFileSync('nofusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
   }
 }
 
@@ -67,7 +74,5 @@ async function getURLFromCartesianProductJSON() {
       await runSingleBenchmark(pagesJson[i]);
     }
   }
-  // console.log(global.results['fuse']);
-  fs.writeFileSync('fusedata.json', JSON.stringify(global.results['fuse']));
-  fs.writeFileSync('nofusedata.json', JSON.stringify(global.results['nofuse']));
+
 })();
