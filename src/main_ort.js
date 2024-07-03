@@ -17,15 +17,15 @@ async function runSingleBenchmark(benchmarkObject) {
   }
 }
 
-async function runURL(dataJson) {
+async function runURL(dataJson, startValue, endValue) {
   const pagesJson = dataJson['urlinfo'];
   const singleTest = pagesJson;
   const keys = Object.keys(singleTest);
   const values = Object.values(singleTest);
   console.log(values);
   console.log('pagesJson' + JSON.stringify(pagesJson))
-  const startValue = pagesJson.inputSize[0];
-  const endValue = pagesJson.inputSize[1];
+  //const startValue = pagesJson.inputSize[0];
+  //const endValue = pagesJson.inputSize[1];
   let url = pagesJson.url;
   console.log(startValue);
   console.log(endValue);
@@ -50,11 +50,13 @@ async function getURLFromCartesianProductJSON() {
   const fsasync = require('fs').promises;
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
   console.log(allDataJson.length);
-  for (let i = 0; i < allDataJson.length; i++) {
+  for (let i = 0; i < 66; i++) {
     global.results = {};
     global.results['fuse'] = {};
     global.results['nofuse'] = {};
-    const [startValue, endValue] = await runURL(allDataJson[i]);
+    const startValue = i *1000;
+    const endValue = (i+1)*1000 - 1;
+     await runURL(allDataJson[0], startValue, endValue);
       // console.log(global.results['fuse']);
     fs.writeFileSync('fusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
     fs.writeFileSync('nofusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
