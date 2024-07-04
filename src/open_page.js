@@ -8,11 +8,9 @@ async function waitForCondition(condition) {
     var start_time = Date.now();
     function checkCondition() {
       if (condition.logEnd == true) {
-        console.log('Test end');
         condition.logEnd = false;
         resolve();
       } else if (Date.now() > start_time + 3600 * 1000) {
-        console.log('Test time out');
         resolve();
       } else {
         setTimeout(checkCondition, 1000);
@@ -27,7 +25,6 @@ const browserPath =
 const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data`;
 
 function log(info, logFile) {
-  // console.log(info);
   const fs = require('fs');
   fs.appendFileSync(logFile, String(info) + '\n');
 }
@@ -47,7 +44,6 @@ async function startContext(exitCondition, logFile, tracingFile = '') {
   --enable-tracing=disabled-by-default-gpu.dawn  --trace-startup-file=${
           tracingFile} --trace-startup-format=json`;
   */
-  console.log(browserArgs);
   let context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     executablePath: browserPath,
