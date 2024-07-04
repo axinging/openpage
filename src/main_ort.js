@@ -50,12 +50,12 @@ async function getURLFromCartesianProductJSON() {
   const fsasync = require('fs').promises;
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
   console.log(allDataJson.length);
-  for (let i = 0; i < 66; i++) {
+  for (let i = 45; i < 660; i++) {
     global.results = {};
     global.results['fuse'] = {};
     global.results['nofuse'] = {};
-    const startValue = i *1000;
-    const endValue = (i+1)*1000 - 1;
+    const startValue = i *100;
+    const endValue = (i+1)*100 - 1;
      await runURL(allDataJson[0], startValue, endValue);
       // console.log(global.results['fuse']);
     fs.writeFileSync('fusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));

@@ -1,10 +1,13 @@
 [
-  {
-    "urlinfo": {
-      "url": [
-        "https://10.239.47.10:8080/onnx-model-nofuse-clamp-debug56.html"
-      ],
-      "inputSize": [0, 1]
-    }
-  }
+	{
+		"urlinfo": {
+			"url": [
+				"https://10.239.47.10:8080/onnx-model-nofuse-clamp-debug56.html"
+			],
+			"inputSize": [
+				0,
+				1
+			]
+		}
+	}
 ]
