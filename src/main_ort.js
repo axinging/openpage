@@ -5,6 +5,7 @@ global.results['nofuse'] = {};
 const openPage = require('./open_page.js');
 const fs = require('fs');
 const args = require('yargs').argv;
+const path = require('path');
 
 async function runSingleBenchmark(benchmarkObject) {
   const url = benchmarkObject['url'];
@@ -45,10 +46,17 @@ async function runURL(dataJson, startValue, endValue) {
   return [startValue, endValue];
 }
 
+function ensureDirectoryExistence(filePath) {
+  if (fs.existsSync(filePath)) {
+    return true;
+  }
+  fs.mkdirSync(filePath);
+}
+
 async function getURLFromCartesianProductJSON() {
   const fsasync = require('fs').promises;
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
-  for (let i = 15; i < 660; i++) {
+  for (let i = 91; i < 660; i++) {
     global.results = {};
     global.results['fuse'] = {};
     global.results['nofuse'] = {};
@@ -56,8 +64,10 @@ async function getURLFromCartesianProductJSON() {
     const endValue = (i+1)*100 - 1;
      await runURL(allDataJson[0], startValue, endValue);
       // console.log(global.results['fuse']);
-    fs.writeFileSync('./fusedata'+w+'data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
-    fs.writeFileSync('./fusedatano'+w+'data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
+    ensureDirectoryExistence('./fusedata'+w);
+    ensureDirectoryExistence('./fusedatano'+w);
+    fs.writeFileSync('./fusedata'+w+'/data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
+    fs.writeFileSync('./fusedatano'+w+'/data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
   }
 }
 
