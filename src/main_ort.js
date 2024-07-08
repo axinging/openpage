@@ -45,7 +45,7 @@ async function runURL(dataJson, startValue, endValue) {
 async function getURLFromCartesianProductJSON() {
   const fsasync = require('fs').promises;
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
-  for (let i = 63; i < 660; i++) {
+  for (let i = 171; i < 660; i++) {
     global.results = {};
     global.results['fuse'] = {};
     global.results['nofuse'] = {};
