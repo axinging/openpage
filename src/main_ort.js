@@ -17,6 +17,8 @@ async function runSingleBenchmark(benchmarkObject) {
   }
 }
 
+const w = '1111';
+
 async function runURL(dataJson, startValue, endValue) {
   const pagesJson = dataJson['urlinfo'];
   const singleTest = pagesJson;
@@ -26,14 +28,15 @@ async function runURL(dataJson, startValue, endValue) {
   //const endValue = pagesJson.inputSize[1];
   let url = pagesJson.url;
   console.log(startValue + ', ' + endValue);
+
   for (let i = startValue; i <= endValue; i++) {
     let finalUrl = url + '?value=' + i;
     let urls =
-        'https://10.239.47.10:8080/onnx-model-nofuse-clamp-debug56.html' +
+        'https://10.239.47.10:8080/mobilenetv2-12-f16-debug-conv5-nofuse.html?w='+w+'&'+
         '?value=' + i;
     await runSingleBenchmark(
         {'repeat': 1, 'url': urls, 'logFile': 'nofuse' + i + '.txt'});
-    urls = 'https://10.239.47.10:8080/onnx-model-fuse-clamp-debug56.html' +
+    urls = 'https://10.239.47.10:8080/mobilenetv2-12-f16-debug-conv5-fuse.html?w='+w+'&'+
         '?value=' + i;
     await runSingleBenchmark(
         {'repeat': 1, 'url': urls, 'logFile': 'fuse' + i + '.txt'});
@@ -45,7 +48,7 @@ async function runURL(dataJson, startValue, endValue) {
 async function getURLFromCartesianProductJSON() {
   const fsasync = require('fs').promises;
   const allDataJson = JSON.parse(await fsasync.readFile('pages_ort.json'));
-  for (let i = 171; i < 660; i++) {
+  for (let i = 15; i < 660; i++) {
     global.results = {};
     global.results['fuse'] = {};
     global.results['nofuse'] = {};
@@ -53,8 +56,8 @@ async function getURLFromCartesianProductJSON() {
     const endValue = (i+1)*100 - 1;
      await runURL(allDataJson[0], startValue, endValue);
       // console.log(global.results['fuse']);
-    fs.writeFileSync('fusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
-    fs.writeFileSync('nofusedata'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
+    fs.writeFileSync('./fusedata'+w+'data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
+    fs.writeFileSync('./fusedatano'+w+'data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
   }
 }
 
