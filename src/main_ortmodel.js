@@ -51,19 +51,24 @@ function ensureDirectoryExistence(filePath) {
 }
 
 async function getURLFromCartesianProductJSON() {
-  for (let i = 91; i < 92; i++) {
+  const models = ['whisper-tiny-decoder', 'whisper-tiny-encoder'];
+
+  for (let i = 0; i < models.length; i++) {
+    let model =models[i];
     global.results = {};
     global.results['pass'] = {};
     global.results['fail'] = {};
     const modelName = 'whisper-tiny-decoder';
-    await runURL(modelName);
-    console.log(global.results['pass']);
-    console.log(global.results['fail']);
+    await runURL(model);
+
     //ensureDirectoryExistence('./fusedata'+w);
     //ensureDirectoryExistence('./fusedatano'+w);
     //fs.writeFileSync('./fusedata'+w+'/data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['fuse']));
     //fs.writeFileSync('./fusedatano'+w+'/data'+startValue+ '-'+ endValue+ '.json', JSON.stringify(global.results['nofuse']));
+    console.log(global.results);
+    //console.log(global.results['fail']);
   }
+
 }
 
 (async function() {
