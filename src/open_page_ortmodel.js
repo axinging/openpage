@@ -21,7 +21,7 @@ async function waitForCondition(condition) {
 }
 
 const browserPath =
-    `C:\\Users\\abc\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe`;
+    `C:\\Users\\xxabc\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe`;
 const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data`;
 
 function log(info, logFile) {
