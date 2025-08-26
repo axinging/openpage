@@ -1,34 +1,16 @@
 const express = require('express');
+const path = require('path');
 const app = express();
-app.use(express.json());
+const port = 5500;
 
-const notifications = [];
+app.use(express.static('public'));
 
-app.post('/api/notify', (req, res) => {
-  const { message, priority = 'normal' } = req.body;
-  
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
-  const notification = {
-    id: Date.now(),
-    message,
-    priority,
-    timestamp: new Date().toISOString()
-  };
-
-  notifications.push(notification);
-  console.log('📨 Received notification:', notification);
-
-  res.json({ success: true, notification });
+app.get('/:pageName', (req, res) => {
+    const pageName = req.params.pageName;
+    res.sendFile(path.join(__dirname, 'views', `${pageName}`));
 });
 
-app.get('/api/notifications', (req, res) => {
-  res.json(notifications);
+app.listen(port, () => {
+    console.log(`Server http://localhost:${port}`);
 });
 
-const PORT = 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Notification server running on http://0.0.0.0:${PORT}`);
-});
