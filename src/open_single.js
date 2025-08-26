@@ -1,7 +1,6 @@
 'use strict';
 const { chromium } = require('playwright');
 const fs = require('fs');
-const args = require('yargs').argv;
 
 const END_TAG = 'Glow effect applied to 1080x1080 image in(ms): ';
 const browserPath =
@@ -25,8 +24,6 @@ async function waitForCondition(condition) {
     checkCondition();
   });
 }
-
-
 
 function log(info, logFile) {
   const fs = require('fs');
@@ -106,156 +103,101 @@ async function openPage(url, browserArgs) {
 }
 
 async function runLoop(url, browserArgs, count) {
-var results = [];
-var result;
- for(var i =0;  i < count; i++) {
-   result = await openPage(url, browserArgs);
-   results.push(result);
- }
- return results;
-}
-
-async function warmup() {
   var results = [];
-  var results_ = [];
   var result;
-  var browserArgs;
-  var count = 3;
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-  results_ = await runLoop('http://10.239.47.16:5500/gloworiginal.html?draw=1000', browserArgs, count);
-  results.push(results_);
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/100`;
-  results_ = await runLoop('http://10.239.47.16:5500/gloworiginal.html?draw=1000', browserArgs, count);
-  results.push(results_);
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/15`;
-  results_ = await runLoop('http://10.239.47.16:5500/gloworiginal.html?draw=1000', browserArgs, count);
-  results.push(results_);
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/10`;
-  results_ = await runLoop('http://10.239.47.16:5500/gloworiginal.html?draw=1000', browserArgs, count);
-  results.push(results_);
+  for (var i = 0; i < count; i++) {
+    result = await openPage(url, browserArgs);
+    results.push(result);
+  }
+  return results;
 }
-
 
 function calculateAverage(dataArray) {
-    const precision = 2;
-    const defaultValue = 0;    
-    const propertyName = 'data';
-    if (!Array.isArray(dataArray)) {
-        throw new Error('Must be array');
-    }
-    if (dataArray.length === 0) {
-        return defaultValue;
-    }
-    
-    const validData = dataArray.filter(item => 
-        item && typeof item === 'object' && 
-        typeof item[propertyName] === 'number' && 
-        !isNaN(item[propertyName])
-    );
-    
-    if (validData.length === 0) {
-        return defaultValue;
-    }
-    
-    const sum = validData.reduce((total, item) => total + item[propertyName], 0);
-    
-    const average = sum / validData.length;
-    return Number(average.toFixed(precision));
+  const precision = 2;
+  const defaultValue = 0;
+  const propertyName = 'data';
+  if (!Array.isArray(dataArray)) {
+    throw new Error('Must be array');
+  }
+  if (dataArray.length === 0) {
+    return defaultValue;
+  }
+
+  const validData = dataArray.filter(item =>
+    item && typeof item === 'object' &&
+    typeof item[propertyName] === 'number' &&
+    !isNaN(item[propertyName])
+  );
+
+  if (validData.length === 0) {
+    return defaultValue;
+  }
+  const sum = validData.reduce((total, item) => total + item[propertyName], 0);
+  const average = sum / validData.length;
+  return Number(average.toFixed(precision));
 }
 
+function saveArrayToJsonSync(array, filePath) {
+  try {
+    const jsonString = JSON.stringify(array, null, 2);
+    fs.writeFileSync(filePath, jsonString, 'utf8');
+    console.log(`Saved to  ${filePath}`);
+    return true;
+  } catch (error) {
+    console.error('Save failed!', error.message);
+    return false;
+  }
+}
 
 async function runSingleBenchmark() {
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 3;
+  var count = 1;
   var average = 0;
-  var avergges = [];
-  var url = 'http://:5500/gloworiginal.html?draw=1000';
+  var averages = [];
+  var url = 'http://1..16:5500/gloworiginal.html?draw=1000';
+  let commonArgs = ' --start-maximized ';
 
-  // warmup
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-  await runLoop(url, browserArgs, 10);
-  
+  var backends = ['dawn-d3d12', 'dawn-d3d11'];
+  var records = [10, 15, 100, 1000];
+  var type = 'graphite';
+  for (const backend of backends) {
+    // warmup
+    browserArgs = commonArgs + ` --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
+    await runLoop(url, browserArgs, 10);
 
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/10`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d12", record: 10, average: average});
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/15`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d12", record: 15, average: average});
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/100`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d12", record: 100, average: average});
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d12  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d12", record: 1000, average: average});
-
+    for (const record of records) {
+      const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
+      const results_ = await runLoop(url, browserArgs, count);
+      results.push(results_);
+      const average = calculateAverage(results_);
+      const resultEntry = {
+        backend: `${type}-${backend}`,
+        record: record,
+        average: average
+      };
+      results.push(resultEntry);
+      averages.push(resultEntry);
+    }
+  }
 
   //warmup
-  browserArgs = `--start-maximized --disable-skia-graphite --enable-gpu-rasterization`;
-  results_ = await runLoop(url, browserArgs, count);
+  browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
+  await runLoop(url, browserArgs, count);
 
-  browserArgs = `--start-maximized --disable-skia-graphite --enable-gpu-rasterization`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "ganesh", record: 0, average: average});
-
-
-  // warmup
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-  await runLoop(url, browserArgs, 10);
-
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/10`;
+  type = 'ganesh';
+  browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
   results_ = await runLoop(url, browserArgs, count);
   results.push(results_);
   average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d11", record: 10, average: average});
+  results.push({ backend: type, record: 0, average: average });
+  averages.push({ backend: type, record: 0, average: average });
 
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/15`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d11", record: 15, average: average});
 
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/100`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d11", record: 100, average: average});
-
-  browserArgs = `--start-maximized --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-  results_ = await runLoop(url, browserArgs, count);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push(average);
-  avergges.push({backend: "graphite-d3d11", record: 1000, average: average});
-
-  console.log(avergges);
+  console.log(averages);
+  saveArrayToJsonSync(results, './graphite-ganesh' + count + '.json');
+  saveArrayToJsonSync(averages, './graphite-ganesh-averages' + count + '.json');
 }
 
 // warmup();
