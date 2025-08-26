@@ -1,6 +1,8 @@
 'use strict';
 const { chromium } = require('playwright');
 const fs = require('fs');
+const args = require('yargs').argv;
+
 // console.log below at the end of your case.
 const END_TAG = 'Glow effect applied to 1080x1080 image in(ms): ';
 const browserPath =
@@ -234,7 +236,7 @@ async function runSingleBenchmark() {
   let commonArgs = ' --start-maximized ';
 
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
-  var records = [10, 15, 100, 1000];
+  var records = [1, 5, 8, 10, 12, 15, 100, 1000];
   var type = 'graphite';
   for (const backend of backends) {
     // warmup
@@ -280,7 +282,94 @@ async function runSingleBenchmark() {
   const difference = calculateTimeDifference(firstTime, secondTime);
   console.log(`Total time: ${difference}s`);
 
+  fs.writeFileSync('graphite-ganesh-averages' + count + '.html', createHTMLTable(averages));
+
 }
 
-// warmup();
-runSingleBenchmark();
+(async function () {
+  const email = args.email;
+  const ip = args.ip;
+  await runSingleBenchmark();
+  if (email && email != '') {
+    await sendMail(email, "Will Read Test id done");
+  } else if (ip && ip != '') {
+    await sendNotification("Done", ip);
+  }
+
+})();
+
+const axios = require('axios');
+
+async function sendNotification(message, priority = 'normal', ip) {
+  try {
+    const response = await axios.post(`http://${ip}:3000/api/notify`, {
+      message,
+      priority
+    });
+    console.log('✅ Notification sent successfully');
+    return response.data;
+  } catch (error) {
+    console.error('❌ Failed to send notification:', error.message);
+  }
+}
+
+// Usage
+// sendNotification('Hello from Computer B!', 'high');
+
+async function sendMail(to, subject, html = '') {
+  console.log(to);
+  let from = to;
+  var domain = from.substring(from.lastIndexOf("@") + 1);
+
+  const nodemailer = require('nodemailer');
+  // smtp-mail.outlook.com
+  let transporter = nodemailer.createTransport({
+    host: `smtp-mail.${domain}`,
+    port: 587,
+    secure: false,
+    auth: false,
+  });
+
+  transporter.verify(error => {
+    if (error)
+      console.log('transporter error: ' + error);
+    else
+      console.log('Email was sent!');
+  });
+
+  let info = await transporter.sendMail({
+    from: from,
+    to: to,
+    subject: subject,
+    html: html,
+  });
+  return Promise.resolve();
+}
+
+
+function createHTMLTable(data) {
+  const records = [...new Set(data.map(item => item.record))].sort((a, b) => a - b);
+  const backends = [...new Set(data.map(item => item.backend))];
+
+  let html = '<table border="1" style="border-collapse: collapse;">\n';
+  html += '  <tr><th>Backend</th>' + records.map(r => `<th>Record ${r}</th>`).join('') + '</tr>\n';
+
+  backends.forEach(backend => {
+    html += '  <tr>';
+    html += `<td>${backend}</td>`;
+
+    records.forEach(record => {
+      const item = data.find(d => d.backend === backend && d.record === record);
+      html += `<td style="text-align: right;">${item ? item.average.toFixed(2) : 'N/A'}</td>`;
+    });
+
+    html += '</tr>\n';
+  });
+
+  html += '</table>';
+  return html;
+}
+function getFileNameWithoutExtension(filePath) {
+  const parsed = path.parse(filePath);
+  return parsed.name;
+}
