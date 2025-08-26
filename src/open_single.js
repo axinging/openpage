@@ -1,7 +1,7 @@
 'use strict';
 const { chromium } = require('playwright');
 const fs = require('fs');
-
+// console.log below at the end of your case.
 const END_TAG = 'Glow effect applied to 1080x1080 image in(ms): ';
 const browserPath =
   `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
@@ -206,11 +206,28 @@ async function getGPUInfo(browserArgs, name) {
 
 }
 
+function getCurrentTime() {
+  const now = new Date();
+  return now.toLocaleTimeString('zh-CN', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function calculateTimeDifference(start, end) {
+  const diffInSeconds = Math.floor((end - start) / 1000);
+  return diffInSeconds;
+}
+
 async function runSingleBenchmark() {
+  const firstTime = new Date();
+  console.log('Start time: ', getCurrentTime());
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 0;
+  var count = 200;
   var average = 0;
   var averages = [];
   var url = 'http://127.0.0.1:5500/gloworiginal.html?draw=1000';
@@ -257,6 +274,12 @@ async function runSingleBenchmark() {
   saveArrayToJsonSync(results, './graphite-ganesh' + count + '.json');
   saveArrayToJsonSync(averages, './graphite-ganesh-averages' + count + '.json');
   await getGPUInfo(browserArgs, type);
+  const secondTime = new Date();
+  console.log('End time: ', getCurrentTime());
+
+  const difference = calculateTimeDifference(firstTime, secondTime);
+  console.log(`Total time: ${difference}s`);
+
 }
 
 // warmup();
