@@ -149,14 +149,71 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
+async function getGPUInfo(browserArgs, name) {
+  let context = await chromium.launchPersistentContext(userDataDir, {
+    headless: false,
+    executablePath: browserPath,
+    viewport: null,
+    ignoreHTTPSErrors: true,
+    args: browserArgs.split(' '),
+  });
+  const page = await context.newPage();
+  await page.goto('chrome://gpu', { waitUntil: 'domcontentloaded' });
+
+  // Extract the entire content of the GPU info page
+
+  // const id = '#content > div:nth-child(4) > div > table';
+  await page.waitForLoadState('networkidle');
+  //console.log(textContent);
+
+  // const htmlContent = await page.content();
+
+  const versionId = '#content > div:nth-child(3) > div > table';
+  const id = '#content > div:nth-child(4) > div > table';
+  await page.waitForSelector(versionId);
+  await page.waitForSelector(id);
+
+  const versionTableHTML = await page.$eval(versionId, table => table.outerHTML);
+  const tableHTML = await page.$eval(id, table => table.outerHTML);
+  fs.writeFileSync(name + '.html', `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Driver Info</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    ${versionTableHTML}
+    <br>
+    <br>
+    <br>
+    ${tableHTML}
+</body>
+</html>
+`);
+
+
+  // You can also get more specific, like checking for "Hardware accelerated"
+  //const isHardwareAccelerated = await page.locator('.feature-status-list').textContent().then(text => text.includes('Hardware accelerated'));
+  //console.log(`\nIs Hardware Accelerated? ${isHardwareAccelerated}`);
+
+  await context.close();
+
+}
+
 async function runSingleBenchmark() {
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 500;
+  var count = 0;
   var average = 0;
   var averages = [];
-  var url = 'http://1..16:5500/gloworiginal.html?draw=1000';
+  var url = 'http://127.0.0.1:5500/gloworiginal.html?draw=1000';
   let commonArgs = ' --start-maximized ';
 
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
@@ -165,7 +222,7 @@ async function runSingleBenchmark() {
   for (const backend of backends) {
     // warmup
     browserArgs = commonArgs + ` --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-    await runLoop(url, browserArgs, 10);
+    if (count != 0) await runLoop(url, browserArgs, 10);
 
     for (const record of records) {
       const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
@@ -180,6 +237,7 @@ async function runSingleBenchmark() {
       results.push(resultEntry);
       averages.push(resultEntry);
     }
+    await getGPUInfo(browserArgs, type + "-" + backend);
   }
 
   //warmup
@@ -198,6 +256,7 @@ async function runSingleBenchmark() {
   console.log(averages);
   saveArrayToJsonSync(results, './graphite-ganesh' + count + '.json');
   saveArrayToJsonSync(averages, './graphite-ganesh-averages' + count + '.json');
+  await getGPUInfo(browserArgs, type);
 }
 
 // warmup();

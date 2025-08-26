@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Glow Effect Test - 1080x1080</title>
+    <style>
+        canvas { border: 1px solid black; margin: 10px; }
+        .container { display: flex; flex-direction: column; align-items: center; }
+        .test-case { margin: 20px; text-align: center; }
+        img { display: none; } /* Hide the source image */
+    </style>
+</head>
+<body>
+    <h1>Glow Effect Test - 1080x1080 Image</h1>
+    
+    <!-- Predefined 1080x1080 image -->
+    <img id="sourceImage" src="poussin.jpg" alt="Test Image">
+    
+    <div class="container" id="testContainer">
+        <p>Loading test image...</p>
+    </div>
+
+    <script>
+        function getImageDataFromCanElem(can,x,y,width,height,getCopy){
+            //var ctx = can.getContext('2d', {willReadFrequently: true});
+            var ctx = can.getContext('2d');
+            var dataDesc = ctx.getImageData(x, y, width, height);//this contains height,width and data
+            var data = dataDesc.data;
+            if (!getCopy) {
+                data = dataDesc;
+            }
+            return data;
+        }
+        // The glow function to test
+        function glow(can, imageData, width, height, drawCount) {
+            var amount = 0.5;
+            var blurAmount = 1.0;
+
+            amount = Math.min(1, Math.max(0, amount));
+            blurAmount = Math.min(5, Math.max(0, blurAmount));
+
+            var blurCanvas = document.createElement("canvas");
+            blurCanvas.width = width;
+            blurCanvas.height = height;
+            var blurCtx = blurCanvas.getContext("2d", { willReadFrequently: true });
+            blurCtx.drawImage(can, 0, 0);
+
+            var scale = 2;
+            var smallWidth = Math.round(width / scale);
+            var smallHeight = Math.round(height / scale);
+
+            var copy = document.createElement("canvas");
+            copy.width = smallWidth;
+            copy.height = smallHeight;
+
+            var clear = true;
+            var steps = Math.round(blurAmount * drawCount);
+            const glowTime1 = performance.now();
+            var copyCtx = copy.getContext("2d", { willReadFrequently: true });
+            for (var i = 0; i < steps; i++) {
+                var scaledWidth = Math.max(1, Math.round(smallWidth - i));
+                var scaledHeight = Math.max(1, Math.round(smallHeight - i));
+
+                copyCtx.clearRect(0, 0, smallWidth, smallHeight);
+
+                copyCtx.drawImage(
+                    blurCanvas,
+                    0, 0, width, height,
+                    0, 0, scaledWidth, scaledHeight
+                );
+
+                blurCtx.clearRect(0, 0, width, height);
+
+                blurCtx.drawImage(
+                    copy,
+                    0, 0, scaledWidth, scaledHeight,
+                    0, 0, width, height
+                );
+            }
+            const glowTime2 = performance.now();
+            var data = imageData.data;
+            var blurData = getImageDataFromCanElem(blurCanvas, 0, 0, width, height, true);
+            const glowTime3 = performance.now();
+            const allDuration = glowTime3 - glowTime1;
+            const drawDuration = glowTime2 - glowTime1;
+            //console.log(`Glow in ${duration.toFixed(2)}ms`);
+
+            var p = width * height;
+
+            var pix = p * 4, pix1 = pix + 1, pix2 = pix + 2, pix3 = pix + 3;
+            while (p--) {
+                if ((data[pix -= 4] += amount * blurData[pix]) > 255) data[pix] = 255;
+                if ((data[pix1 -= 4] += amount * blurData[pix1]) > 255) data[pix1] = 255;
+                if ((data[pix2 -= 4] += amount * blurData[pix2]) > 255) data[pix2] = 255;
+            }
+
+            return [data,allDuration, drawDuration];
+        }
+
+        // Apply glow effect to an image
+        function applyGlowToImage(image, width, height, drawCount) {
+            const container = document.getElementById('testContainer');
+            container.innerHTML = '';
+            
+            const testCase = document.createElement('div');
+            testCase.className = 'test-case';
+            
+            // Create original canvas
+            const originalCanvas = document.createElement('canvas');
+            originalCanvas.width = width;
+            originalCanvas.height = height;
+            const originalCtx = originalCanvas.getContext('2d');
+            originalCtx.drawImage(image, 0, 0, width, height);
+            
+            const originalLabel = document.createElement('p');
+            originalLabel.textContent = 'Original Image:';
+            testCase.appendChild(originalLabel);
+            testCase.appendChild(originalCanvas);
+            
+            // Create canvas for glow effect
+            const glowCanvas = document.createElement('canvas');
+            glowCanvas.width = width;
+            glowCanvas.height = height;
+            const glowCtx = glowCanvas.getContext('2d');
+            glowCtx.drawImage(image, 0, 0, width, height);
+            
+            // Get image data and apply glow
+            const startTime = performance.now();
+            console.time('applyGlowToImage');
+            const imageData = glowCtx.getImageData(0, 0, width, height);
+            const glowTime1 = performance.now();
+            const [glowData, gpuDuration, drawDuration] = glow(originalCanvas, imageData, width, height, drawCount);
+            const glowTime2 = performance.now();
+            glowCtx.putImageData(new ImageData(glowData, width, height), 0, 0);
+            console.timeEnd('applyGlowToImage');
+
+            const duration = performance.now() - startTime;
+            const glowDuration = glowTime2 - glowTime1;
+            
+            const glowLabel = document.createElement('p');
+            glowLabel.textContent = 'With Glow Effect:';
+            testCase.appendChild(glowLabel);
+            testCase.appendChild(glowCanvas);
+                        
+            // Performance info
+            const perfLabel = document.createElement('p');
+            perfLabel.textContent = `${width}x${height} in ${duration.toFixed(2)}ms, `;
+            testCase.appendChild(perfLabel);
+            
+            container.appendChild(testCase);
+            console.log(`Glow effect applied to ${width}x${height} image in(ms): ${duration.toFixed(2)}ms`);
+        }
+
+        // Run test when image loads
+        document.getElementById('sourceImage').onload = function() {
+            const img = this;
+            // Ensure image is 1080x1080 (placeholder service should return correct size)
+            if (img.naturalWidth !== 1080 || img.naturalHeight !== 1080) {
+                console.warn(`Image is ${img.naturalWidth}x${img.naturalHeight}, expected 1080x1080`);
+            }
+            const urlParams = new URLSearchParams(window.location.search);
+            var drawCount = Number(urlParams.get('draw')); // returns NaN if not a number
+            if (Number.isNaN(drawCount)|| drawCount == 0) {
+               drawCount = 100; 
+            }
+            applyGlowToImage(img, 1080, 1080, drawCount);
+        };
+        
+        // Fallback in case image fails to load
+        document.getElementById('sourceImage').onerror = function() {
+            const container = document.getElementById('testContainer');
+            container.innerHTML = '<p>Error loading test image. Using generated image instead.</p>';
+            
+            // Create a fallback test image
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1080;
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient background
+            const gradient = ctx.createRadialGradient(540, 540, 0, 540, 540, 540);
+            gradient.addColorStop(0, 'red');
+            gradient.addColorStop(0.5, 'green');
+            gradient.addColorStop(1, 'blue');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1080, 1080);
+            
+            // Add text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 100px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GLOW TEST', 540, 540);
+            
+            applyGlowToImage(canvas, 1080, 1080);
+        };
+    </script>
+</body>
+</html>
