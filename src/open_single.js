@@ -153,7 +153,7 @@ async function runSingleBenchmark() {
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 1;
+  var count = 500;
   var average = 0;
   var averages = [];
   var url = 'http://1..16:5500/gloworiginal.html?draw=1000';
