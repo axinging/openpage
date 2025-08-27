@@ -229,7 +229,7 @@ async function runSingleBenchmark() {
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 200;
+  var count = 100;
   var average = 0;
   var averages = [];
   var url = 'http://127.0.0.1:5500/gloworiginal.html?draw=1000';
@@ -238,10 +238,11 @@ async function runSingleBenchmark() {
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
   var records = [1, 5, 8, 10, 12, 15, 100, 1000];
   var type = 'graphite';
+  const warmupCount = 10;
   for (const backend of backends) {
     // warmup
-    browserArgs = commonArgs + ` --skia-graphite-backend=dawn-d3d11  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-    if (count != 0) await runLoop(url, browserArgs, 10);
+    browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
+    if (count != 0) await runLoop(url, browserArgs, warmupCount);
 
     for (const record of records) {
       const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
@@ -261,7 +262,7 @@ async function runSingleBenchmark() {
 
   //warmup
   browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
-  await runLoop(url, browserArgs, count);
+  await runLoop(url, browserArgs, warmupCount);
 
   type = 'ganesh';
   browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
@@ -270,7 +271,6 @@ async function runSingleBenchmark() {
   average = calculateAverage(results_);
   results.push({ backend: type, record: 0, average: average });
   averages.push({ backend: type, record: 0, average: average });
-
 
   console.log(averages);
   saveArrayToJsonSync(results, './graphite-ganesh' + count + '.json');
