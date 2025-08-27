@@ -236,7 +236,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
   let commonArgs = ' --start-maximized ';
 
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
-  var records = [1, 5, 8, 10, 12, 15, 100, 1000];
+  var records = [1, 5, 8, 10, 12, 15, 100, 150, 200, 400, 600, 1000];
   var type = 'graphite';
   const warmupCount = 10;
   for (const backend of backends) {
@@ -273,8 +273,8 @@ async function runSingleBenchmark(repeat, draw = 500) {
   averages.push({ backend: type, record: 0, average: average });
 
   console.log(averages);
-  saveArrayToJsonSync(results, './graphite-ganesh' + count + '.json');
-  saveArrayToJsonSync(averages, './graphite-ganesh-averages' + count + '.json');
+  saveArrayToJsonSync(results, './graphite-ganesh-count' + count +"-draw"+draw+ '.json');
+  saveArrayToJsonSync(averages, './graphite-ganesh-averages-count' + count + '.json');
   await getGPUInfo(browserArgs, type);
   const secondTime = new Date();
   console.log('End time: ', getCurrentTime());
@@ -282,7 +282,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
   const difference = calculateTimeDifference(firstTime, secondTime);
   console.log(`Total time: ${difference}s`);
 
-  fs.writeFileSync('graphite-ganesh-averages' + count + '.html', createHTMLTable(averages));
+  fs.writeFileSync('graphite-ganesh-averages-count' + count +"-draw"+draw+ '.html', createHTMLTable(averages));
 
 }
 
