@@ -104,10 +104,10 @@ async function openPage(url, browserArgs) {
   };
 }
 
-async function runLoop(url, browserArgs, count) {
+async function runLoop(url, browserArgs, repeat) {
   var results = [];
   var result;
-  for (var i = 0; i < count; i++) {
+  for (var i = 0; i < repeat; i++) {
     result = await openPage(url, browserArgs);
     results.push(result);
   }
@@ -229,7 +229,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = repeat;
+  // var count = repeat;
   var average = 0;
   var averages = [];
   var url = `http://127.0.0.1:5500/gloworiginal.html?draw=${draw}`;
@@ -238,15 +238,15 @@ async function runSingleBenchmark(repeat, draw = 500) {
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
   var records = [1, 5, 8, 10, 12, 15, 100, 150, 200, 400, 600, 1000];
   var type = 'graphite';
-  const warmupCount = 10;
+  const warmupRepeat = 10;
   for (const backend of backends) {
     // warmup
     browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
-    if (count != 0) await runLoop(url, browserArgs, warmupCount);
+    if (repeat != 0) await runLoop(url, browserArgs, warmupRepeat);
 
     for (const record of records) {
       const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
-      const results_ = await runLoop(url, browserArgs, count);
+      const results_ = await runLoop(url, browserArgs, repeat);
       results.push(results_);
       const average = calculateAverage(results_);
       const resultEntry = {
@@ -262,27 +262,27 @@ async function runSingleBenchmark(repeat, draw = 500) {
 
   //warmup
   browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
-  await runLoop(url, browserArgs, warmupCount);
+  await runLoop(url, browserArgs, warmupRepeat);
 
   type = 'ganesh';
   browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
-  results_ = await runLoop(url, browserArgs, count);
+  results_ = await runLoop(url, browserArgs, repeat);
   results.push(results_);
   average = calculateAverage(results_);
   results.push({ backend: type, record: 0, average: average });
   averages.push({ backend: type, record: 0, average: average });
 
   console.log(averages);
-  saveArrayToJsonSync(results, './graphite-ganesh-count' + count +"-draw"+draw+ '.json');
-  saveArrayToJsonSync(averages, './graphite-ganesh-averages-count' + count + '.json');
+  let miscInfo = '-repeat' + repeat +"-draw"+draw;
+  saveArrayToJsonSync(results, './graphite-ganesh'+miscInfo +'.json');
+  saveArrayToJsonSync(averages, './graphite-ganesh-averages' + miscInfo + '.json');
   await getGPUInfo(browserArgs, type);
   const secondTime = new Date();
   console.log('End time: ', getCurrentTime());
 
   const difference = calculateTimeDifference(firstTime, secondTime);
   console.log(`Total time: ${difference}s`);
-
-  fs.writeFileSync('graphite-ganesh-averages-count' + count +"-draw"+draw+ '.html', createHTMLTable(averages));
+  fs.writeFileSync('graphite-ganesh-averages' + miscInfo+ '.html', createHTMLTable(averages));
 
 }
 
