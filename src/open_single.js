@@ -223,16 +223,16 @@ function calculateTimeDifference(start, end) {
   return diffInSeconds;
 }
 
-async function runSingleBenchmark() {
+async function runSingleBenchmark(repeat, draw = 500) {
   const firstTime = new Date();
   console.log('Start time: ', getCurrentTime());
   var results = [];
   var results_ = [];
   var browserArgs;
-  var count = 100;
+  var count = repeat;
   var average = 0;
   var averages = [];
-  var url = 'http://127.0.0.1:5500/gloworiginal.html?draw=1000';
+  var url = `http://127.0.0.1:5500/gloworiginal.html?draw=${draw}`;
   let commonArgs = ' --start-maximized ';
 
   var backends = ['dawn-d3d12', 'dawn-d3d11'];
@@ -289,7 +289,9 @@ async function runSingleBenchmark() {
 (async function () {
   const email = args.email;
   const ip = args.ip;
-  await runSingleBenchmark();
+  const repeat = (args.repeat && args.repeat!='') ? args.repeat: 100;
+  const draw = (args.draw && args.draw!='') ? args.draw: 500;
+  await runSingleBenchmark(repeat, draw);
   if (email && email != '') {
     await sendMail(email, "Will Read Test id done");
   } else if (ip && ip != '') {
