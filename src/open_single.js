@@ -2,6 +2,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const args = require('yargs').argv;
+const path = require('path');
 
 // console.log below at the end of your case.
 const END_TAG = 'Glow effect applied to 1080x1080 image in(ms): ';
@@ -151,7 +152,7 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
-async function getGPUInfo(browserArgs, name) {
+async function getGPUInfo(browserArgs, name, folder) {
   let context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     executablePath: browserPath,
@@ -177,7 +178,7 @@ async function getGPUInfo(browserArgs, name) {
 
   const versionTableHTML = await page.$eval(versionId, table => table.outerHTML);
   const tableHTML = await page.$eval(id, table => table.outerHTML);
-  fs.writeFileSync(name + '.html', `
+  fs.writeFileSync(folder + name + '.html', `
 <!DOCTYPE html>
 <html>
 <head>
@@ -239,6 +240,9 @@ async function runSingleBenchmark(repeat, draw = 500) {
   var records = [1, 5, 8, 10, 12, 15, 100, 150, 200, 400, 600, 1000];
   var type = 'graphite';
   const warmupRepeat = 10;
+  let miscInfo = 'repeat' + repeat + "-draw" + draw;
+  const folder = createTimeStampedFolder(miscInfo) + "/";
+
   for (const backend of backends) {
     // warmup
     browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/1000`;
@@ -257,7 +261,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
       results.push(resultEntry);
       averages.push(resultEntry);
     }
-    await getGPUInfo(browserArgs, type + "-" + backend);
+    await getGPUInfo(browserArgs, type + "-" + backend, folder);
   }
 
   //warmup
@@ -273,24 +277,24 @@ async function runSingleBenchmark(repeat, draw = 500) {
   averages.push({ backend: type, record: 0, average: average });
 
   console.log(averages);
-  let miscInfo = '-repeat' + repeat +"-draw"+draw;
-  saveArrayToJsonSync(results, './graphite-ganesh'+miscInfo +'.json');
-  saveArrayToJsonSync(averages, './graphite-ganesh-averages' + miscInfo + '.json');
-  await getGPUInfo(browserArgs, type);
+
+  saveArrayToJsonSync(results, folder + '/graphite-ganesh-' + miscInfo + '.json');
+  saveArrayToJsonSync(averages, folder + '/graphite-ganesh-averages-' + miscInfo + '.json');
+  await getGPUInfo(browserArgs, type, folder + "/");
   const secondTime = new Date();
   console.log('End time: ', getCurrentTime());
 
   const difference = calculateTimeDifference(firstTime, secondTime);
   console.log(`Total time: ${difference}s`);
-  fs.writeFileSync('graphite-ganesh-averages' + miscInfo+ '.html', createHTMLTable(averages));
+  fs.writeFileSync(folder + '/graphite-ganesh-averages-' + miscInfo + '.html', createHTMLTable(averages));
 
 }
 
 (async function () {
   const email = args.email;
   const ip = args.ip;
-  const repeat = (args.repeat && args.repeat!='') ? args.repeat: 100;
-  const draw = (args.draw && args.draw!='') ? args.draw: 500;
+  const repeat = (args.repeat && args.repeat != '') ? args.repeat : 100;
+  const draw = (args.draw && args.draw != '') ? args.draw : 500;
   await runSingleBenchmark(repeat, draw);
   if (email && email != '') {
     await sendMail(email, "Will Read Test id done");
@@ -374,4 +378,31 @@ function createHTMLTable(data) {
 function getFileNameWithoutExtension(filePath) {
   const parsed = path.parse(filePath);
   return parsed.name;
+}
+
+function createTimeStampedFolder(prefix = '') {
+  const basePath = './';
+  // Get current timestamp
+  const now = new Date();
+
+  // Format timestamp as YYYY-MM-DD_HH-MM-SS
+  const timestamp = now.toISOString()
+    .replace(/:/g, '-')
+    .replace(/\..+/, '')
+    .replace('T', '_');
+
+  // Create folder path
+  const folderName = `${prefix}_${timestamp}`;
+  const folderPath = path.join(basePath, folderName);
+
+  // Create folder
+  fs.mkdir(folderPath, { recursive: true }, (err) => {
+    if (err) {
+      console.error('Error creating folder:', err);
+      return;
+    }
+    console.log(`Folder created: ${folderPath}`);
+  });
+
+  return folderPath;
 }
