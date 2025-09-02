@@ -236,8 +236,8 @@ async function runSingleBenchmark(repeat, draw = 500) {
   var url = `http://127.0.0.1:5500/gloworiginal.html?draw=${draw}`;
   let commonArgs = ' --start-maximized ';
 
-  var backends = ['dawn-d3d12', 'dawn-d3d11'];
-  var records = [1, 5, 8, 10, 12, 15, 100, 150, 200, 400, 600, 1000];
+  var backends = ['dawn-d3d12']; // , 'dawn-d3d11'
+  var records = [1, 5, 10, 15, 100, 200, 400, 1000];
   var type = 'graphite';
   const warmupRepeat = 10;
   let miscInfo = 'repeat' + repeat + "-draw" + draw;
@@ -249,6 +249,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
     if (repeat != 0) await runLoop(url, browserArgs, warmupRepeat);
 
     for (const record of records) {
+      console.log(`${backend} + ${record}`);
       const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
       const results_ = await runLoop(url, browserArgs, repeat);
       results.push(results_);
@@ -293,7 +294,7 @@ async function runSingleBenchmark(repeat, draw = 500) {
 (async function () {
   const email = args.email;
   const ip = args.ip;
-  const repeat = (args.repeat && args.repeat != '') ? args.repeat : 100;
+  const repeat = (args.repeat && args.repeat != '') ? args.repeat : 50;
   const draw = (args.draw && args.draw != '') ? args.draw : 500;
   await runSingleBenchmark(repeat, draw);
   if (email && email != '') {
