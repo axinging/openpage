@@ -240,7 +240,7 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
   var records = [1, 5, 10, 15, 100, 200, 1000];
   var type = 'graphite';
   const warmupRepeat = 10;
-  let miscInfo = tag + "-"+ 'repeat' + repeat + "-draw" + draw;
+  let miscInfo = (tag!="" ? tag  + "-" : tag) + 'repeat' + repeat + "-draw" + draw;
   const folder = createTimeStampedFolder(miscInfo) + "/";
   console.log(folder);
 
