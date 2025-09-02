@@ -234,7 +234,7 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
   var average = 0;
   var averages = [];
   var url = `http://127.0.0.1:5500/gloworiginal.html?draw=${draw}`;
-  let commonArgs = ' --start-maximized ';
+  let commonArgs = ' ' + '--start-maximized --start-fullscreen' + ' ';
 
   var backends = ['dawn-d3d12']; // , 'dawn-d3d11'
   var records = [1, 5, 10, 15, 100, 200, 1000];
