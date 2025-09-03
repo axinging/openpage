@@ -123,7 +123,7 @@ function calculateAverage(dataArray) {
     throw new Error('Must be array');
   }
   if (dataArray.length === 0) {
-    return defaultValue;
+    return {defaultValue, defaultValue, defaultValue};
   }
 
   const validData = dataArray.filter(item =>
@@ -133,11 +133,17 @@ function calculateAverage(dataArray) {
   );
 
   if (validData.length === 0) {
-    return defaultValue;
+    return {defaultValue, defaultValue, defaultValue};
   }
   const sum = validData.reduce((total, item) => total + item[propertyName], 0);
   const average = sum / validData.length;
-  return Number(average.toFixed(precision));
+
+  const values = validData.map(item => item[propertyName]);
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  return [Number(average.toFixed(precision)), Number(min.toFixed(precision)), Number(max.toFixed(precision))];
 }
 
 function saveArrayToJsonSync(array, filePath) {
@@ -234,7 +240,7 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
   var average = 0;
   var averages = [];
   var url = `http://127.0.0.1:5500/gloworiginal.html?draw=${draw}`;
-  let commonArgs = ' ' + '--start-maximized --start-fullscreen' + ' ';
+  let commonArgs = ' ' + '--start-maximized' + ' '; //  --start-fullscreen
 
   var backends = ['dawn-d3d12']; // , 'dawn-d3d11'
   var records = [1, 5, 10, 15, 100, 200, 1000];
@@ -254,11 +260,13 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
       const browserArgs = commonArgs + ` --skia-graphite-backend=${backend}  --enable-features=SkiaGraphite:max_pending_recordings/${record}`;
       const results_ = await runLoop(url, browserArgs, repeat);
       results.push(results_);
-      const average = calculateAverage(results_);
+      const [average, min, max] = calculateAverage(results_);
       const resultEntry = {
         backend: `${type}-${backend}`,
         record: record,
-        average: average
+        average: average,
+        min: min,
+        max: max
       };
       results.push(resultEntry);
       averages.push(resultEntry);
@@ -269,14 +277,17 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
   //warmup
   browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
   await runLoop(url, browserArgs, warmupRepeat);
-
-  type = 'ganesh';
-  browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
-  results_ = await runLoop(url, browserArgs, repeat);
-  results.push(results_);
-  average = calculateAverage(results_);
-  results.push({ backend: type, record: 0, average: average });
-  averages.push({ backend: type, record: 0, average: average });
+  {
+    type = 'ganesh';
+    browserArgs = commonArgs + ` --disable-skia-graphite --enable-gpu-rasterization`;
+    results_ = await runLoop(url, browserArgs, repeat);
+    results.push(results_);
+    const [average,min, max] = calculateAverage(results_);
+    results.push({ backend: type, record: 0, average: average, min: min,
+        max: max });
+    averages.push({ backend: type, record: 0, average: average, min: min,
+        max: max });
+  }
 
   console.log(averages);
 
