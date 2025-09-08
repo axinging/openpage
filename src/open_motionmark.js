@@ -103,52 +103,34 @@ async function openPage(url, browserArgs) {
   //await page.waitForSelector(id);
 
 
-    // 3. 等待结果表格出现
-    await page.waitForSelector('#results-header', { timeout: 300000 });
+  // 3. 等待结果表格出现
+  const tableId = '#results-header';
+  await page.waitForSelector(tableId, { timeout: 30000000 });
+  await page.waitForSelector('button:has-text("Test Again")', { timeout: 30000000 });
 
-    // 4. 提取表格数据
-    const tableData = await page.$eval('#results-header', (table) => {
-      const result = {
-        headers: [],
-        rows: []
-      };
+  const tableHTML = await page.$eval(tableId, table => table.outerHTML);
 
-      // 提取表头
-      const headerCells = table.querySelectorAll('thead th');
-      result.headers = Array.from(headerCells).map(cell => 
-        cell.textContent.trim()
-      );
 
-      // 提取表格行数据
-      const rows = table.querySelectorAll('tbody tr');
-      rows.forEach(row => {
-        const rowData = {};
-        const cells = row.querySelectorAll('td');
-        
-        cells.forEach((cell, index) => {
-          // 使用表头作为键，或者使用列索引
-          const key = result.headers[index] || `column_${index}`;
-          rowData[key] = cell.textContent.trim();
-        });
-        
-        result.rows.push(rowData);
-      });
+  const scoreTableId = '#results-score';
+  await page.waitForSelector(scoreTableId, { timeout: 30000000 });
 
-      return result;
-    });
+  const scoreTableHTML = await page.$eval(scoreTableId, table => table.outerHTML);
 
-    // 5. 保存为 JSON 文件
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `motionmark-results-${timestamp}.json`;
-    
-    await fs.writeFile(
-      filename, 
-      JSON.stringify(tableData, null, 2), 
-      'utf8'
-    );
 
-    console.log(`数据已成功保存到 ${filename}`);
-    console.log('提取的数据:', JSON.stringify(tableData, null, 2));
+  const dataTableId = '#results-data';
+  await page.waitForSelector(dataTableId, { timeout: 30000000 });
+
+  const dataTableHTML = await page.$eval(dataTableId, table => table.outerHTML);
+
+
+
+  // 5. 保存为 JSON 文件
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `motionmark-results-${timestamp}.json`;
+
+
+  console.log(scoreTableHTML);
+  //console.log('提取的数据:', JSON.stringify(tableData, null, 2));
 
 
 
@@ -157,7 +139,9 @@ async function openPage(url, browserArgs) {
   return {
     url: url,
     browserArgs: browserArgs,
-    data: tableData
+    data: tableHTML,
+    data2: scoreTableHTML,
+    data3: dataTableHTML,
   };
 }
 
@@ -180,7 +164,7 @@ function calculateAverage(dataArray) {
     throw new Error('Must be array');
   }
   if (dataArray.length === 0) {
-    return {defaultValue, defaultValue, defaultValue};
+    return { defaultValue, defaultValue, defaultValue };
   }
 
   const validData = dataArray.filter(item =>
@@ -190,7 +174,7 @@ function calculateAverage(dataArray) {
   );
 
   if (validData.length === 0) {
-    return {defaultValue, defaultValue, defaultValue};
+    return { defaultValue, defaultValue, defaultValue };
   }
   const sum = validData.reduce((total, item) => total + item[propertyName], 0);
   const average = sum / validData.length;
@@ -300,10 +284,10 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
   let commonArgs = ' ' + '--start-maximized' + ' '; //  --start-fullscreen
 
   var backends = ['dawn-d3d12']; // , 'dawn-d3d11'
-  var records = [100];
+  var records = [1, 5, 10, 15, 100, 200, 1000];
   var type = 'graphite';
   const warmupRepeat = 0;
-  let miscInfo = (tag!="" ? tag  + "-" : tag) + 'repeat' + repeat + "-draw" + draw;
+  let miscInfo = (tag != "" ? tag + "-" : tag) + 'repeat' + repeat + "-draw" + draw;
   const folder = createTimeStampedFolder(miscInfo) + "/";
   console.log(folder);
 
@@ -321,12 +305,12 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
       const resultEntry = {
         backend: `${type}-${backend}`,
         record: record,
-        average: average,
+        average: 0,
         min: 0,
         max: 0
       };
-      results.push(resultEntry);
-      averages.push(resultEntry);
+      //results.push(resultEntry);
+      //averages.push(resultEntry);
     }
     await getGPUInfo(browserArgs, type + "-" + backend, folder);
   }
@@ -365,9 +349,9 @@ async function runSingleBenchmark(repeat, draw = 500, tag = "") {
 (async function () {
   const email = args.email;
   const ip = args.ip;
-  const repeat = (args.repeat && args.repeat != '') ? args.repeat : 50;
+  const repeat = (args.repeat && args.repeat != '') ? args.repeat : 5;
   const draw = (args.draw && args.draw != '') ? args.draw : 500;
-  const tag = (args.tag && args.tag != '') ? args.tag : "";
+  const tag = (args.tag && args.tag != '') ? args.tag : "motionmark";
   await runSingleBenchmark(repeat, draw, tag);
   if (email && email != '') {
     await sendMail(email, "Will Read Test id done");
