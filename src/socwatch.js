@@ -7,7 +7,7 @@ const os = require('os');
 const browserPath =
   `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
 const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
-browserArgs = '';
+browserArgs = '--start-maximized';
 async function monitorAndExecute() {
     let browser = null;
     let page = null;
@@ -22,10 +22,12 @@ async function monitorAndExecute() {
         await delay(10*1000);
         
         console.log('Start browser...');
+        /*
         browser = await chromium.launch({
             headless: false,
             args: ['--start-maximized']
         });
+        */
         
         //const context = await browser.newContext();
           let context = await chromium.launchPersistentContext(userDataDir, {
@@ -38,7 +40,7 @@ async function monitorAndExecute() {
         page = await context.newPage();
         
         console.log('open: https://www.com/');
-        await page.goto('https:///videoeffect/blur4.html#renderer=webgpu&zeroCopy=on&directOutput=on&displaySize=original', {
+        await page.goto('https://taste1981.github.io/workspace/videoeffect/blur4.html#renderer=webgpu&zeroCopy=on&directOutput=on&fakeSegmentation=fakeSegmentation&displaySize=original', {
             waitUntil: 'networkidle'
         });
         
@@ -58,7 +60,7 @@ async function monitorAndExecute() {
         
         console.log('Start socwatch...');
 
-        const command = 'socwatch.exe -t 120 -s 20 -f power -o test_result_1';
+        const command = 'socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o test_result_1';
         await executeCommand(command);
         
         console.log('Wait 3 mins...');
@@ -79,7 +81,6 @@ async function monitorAndExecute() {
     } catch (error) {
         console.error('Error:', error);
         
-        // 确保浏览器被关闭
         if (browser) {
             await browser.close();
         }
@@ -169,19 +170,20 @@ function parseSocwatchResult(filename) {
     try {
         const filePath = path.resolve(filename);
         if (!fs.existsSync(filePath)) {
-            throw new Error(`Reult file not exist: ${filePath}`);
+            throw new Error(`Result file not exist: ${filePath}`);
         }
         
         const content = fs.readFileSync(filePath, 'utf8');
         const lines = content.split('\n');
         
-        // Find "Total ,                      ,"的行
+        // Find "Total ,                      ,"
+        const KEY = 'Total ,                      ,';
         const targetLine = lines.find(line => 
-            line.includes('Total ,                      ,')
+            line.includes(KEY)
         );
         
         if (!targetLine) {
-            throw new Error('Cannot find "Total ,                      ,"');
+            throw new Error(`Cannot find ${KEY}`);
         }
         
         return targetLine.trim();
