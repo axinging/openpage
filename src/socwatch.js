@@ -231,17 +231,19 @@ function saveArrayToJsonSync(array, filePath) {
 }
 
 async function main() {
+  const start = performance.now();
   const info = args.info && args.info != "" ? args.info : "";
-  const repeat = 4;
+  const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
 
   try {
     const renderers = ["webgpu", "webgl2"];
-    const loops = [4, 0];
+    // const loops = [4, 0];
+    const loops = [4];
     const results = [];
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://10.239.47.2:8080/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://taste1981.github.io/workspace/videoeffect/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
           const url =
             render === "webgpu"
@@ -270,6 +272,9 @@ async function main() {
   } catch (error) {
     console.error("Fail:", error);
   }
+  const end = performance.now();
+  const durationInSeconds = (end - start) / 1000;
+  console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
 }
 
 module.exports = {
