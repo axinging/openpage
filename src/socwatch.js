@@ -13,14 +13,14 @@ async function monitorAndExecute(url, folder) {
   let page = null;
 
   try {
-    console.log("Wait cpu usage lower 2%...");
-    // Wait 2%
-    await waitForLowCpuUsage(5);
     console.log("Wait 2 mins till CPU usage < 5%...");
+    // Wait 5%
+    await waitForLowCpuUsage(5);
 
     // Wait 2 mins, 2 * 60 * 1000
-    const twoMins = 2 * 60 * 1000;
-    await delay(twoMins);
+    const TWO_MINS = 2 * 60 * 1000;
+    const ONE_MINS = 1 * 60 * 1000;
+    await delay(TWO_MINS);
 
     console.log("Start browser...");
     var context = await chromium.launchPersistentContext(userDataDir, {
@@ -32,60 +32,26 @@ async function monitorAndExecute(url, folder) {
       permissions: ["camera", "microphone", "geolocation"],
       args: [
         "--start-maximized",
-
         "--disable-web-security",
         "--allow-running-insecure-content",
       ],
     });
-    //"--use-fake-ui-for-media-stream",
-    //"--use-fake-device-for-media-stream",
-    /*
-        context = await browser.newContext({
-            permissions: ['camera', 'microphone'] 
-        });
-        */
-    /*
-        let context = await chromium.launchPersistentContext(userDataDir, {
-            headless: false,
-            executablePath: browserPath,
-            viewport: null,
-            ignoreHTTPSErrors: true,
-            args: browserArgs.split(' '),
-        });
-        */
-    page = await context.newPage();
-    /*
-      await page.addInitScript(() => {
-            const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-            
-            navigator.mediaDevices.getUserMedia = async (constraints) => {
-                console.log('getUserMedia called with:', constraints);
-                try {
-                    return await originalGetUserMedia(constraints);
-                } catch (error) {
-                    console.log('Falling back to virtual stream');
-                    //
-                    return await originalGetUserMedia(constraints);
-                }
-            };
-        });
-        */
 
-    console.log("open: https://www.com/");
+    page = await context.newPage();
+
+    console.log(`Open: ${url}`);
     await page.goto(url, {
       waitUntil: "networkidle",
     });
 
-    console.log("Wait 2 mins...");
-    // Wait 2 mins
-    await delay(twoMins);
+    console.log("Wait 1 mins after open page...");
+    // Wait 1 mins
+    await delay(ONE_MINS);
 
-    console.log("Click Start ...");
-
+    console.log("Click start button...");
     const startButton = await page.$("#startButton");
     if (startButton) {
       await startButton.click();
-      console.log("Button clicked!");
     } else {
       throw new Error("Cannot find #startButton");
     }
@@ -95,10 +61,10 @@ async function monitorAndExecute(url, folder) {
     const command = `socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o .\\${folder}\\${resultFileName}`;
     await executeCommand(command);
 
-    console.log("Wait 3 mins...");
+    console.log("Wait 3 mins, socwatch needs 2 mins...");
     // Wait 3 mins
-    const threeMins = 3 * 60 * 1000;
-    await delay(threeMins);
+    const THREE_MINS = 3 * 60 * 1000;
+    await delay(THREE_MINS);
 
     console.log("Close browser...");
 
@@ -106,7 +72,7 @@ async function monitorAndExecute(url, folder) {
     context = null;
 
     console.log("Parse results...");
-    await delay(twoMins);
+    // await delay(ONE_MINS);
     // Parse results
     const result = parseSocwatchResult(`.\\${folder}\\${resultFileName}.csv`);
     return result;
@@ -241,7 +207,8 @@ function parseSocwatchResult(filename) {
     const targetLine = lines.find((line) => line.includes(KEY));
 
     if (!targetLine) {
-      throw new Error(`Cannot find ${KEY}`);
+      console.error(`Cannot find ${KEY}`);
+      return '';
     }
 
     return targetLine.trim();
@@ -274,20 +241,19 @@ async function main() {
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://239.47.2:8080/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://10.239.47.2:8080/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
           const url =
             render === "webgpu"
               ? `${baseUrl}&zeroCopy=on&directOutput=on&loop=${loop}`
               : `${baseUrl}&loop=${loop}`;
 
-          const folder = createTimeStampedFolder(`${render}loop${loop}`);
+          const folder = createTimeStampedFolder(`${render}loop${loop}repeat${repeat}_i${i}`);
           const result = await monitorAndExecute(url, folder);
-          console.log("Result:", result);
-
           saveArrayToJsonSync(result, `${folder}/1.json`);
-          console.log(resultToNumber(result));
-          results.push({ render: render, loop: loop, result: resultToNumber(result) });
+          const result2 = { render: render, loop: loop, repeat: repeat, result: extractFirstNumber(result) };
+          console.log(JSON.stringify(result2));
+          results.push(result2);
         }
       }
     }
@@ -317,10 +283,10 @@ if (require.main === module) {
   main();
 }
 
-function resultToNumber(result) {
-  const text = "Total ,                      , 7541.52            , 906215902720.00";
-  const firstNumber = text.match(/\d+\.\d+|\d+/)[0];
-  const numericValue = parseFloat(firstNumber);
-  console.log(numericValue);
-  return numericValue;
+function extractFirstNumber(text) {
+  if (typeof text !== 'string') return 0;
+  const match = text.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
+  if (!match) return 0;
+  const numericValue = parseFloat(match[0]);
+  return isNaN(numericValue) ? 0 : numericValue;
 }
