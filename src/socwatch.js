@@ -5,11 +5,46 @@ const path = require("path");
 const os = require("os");
 const args = require("yargs").argv;
 
-const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
-const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
-browserArgs = "--start-maximized";
-async function monitorAndExecute(url, folder) {
-  let browser = null;
+function extractFirstNumber(text, type) {
+  return type == "power"
+    ? extractFirstNumberPower(text)
+    : extractFirstNumberMemory(text);
+}
+
+function extractFirstNumberPower(text) {
+  if (typeof text !== "string") return 0;
+  const match = text.match(
+    /(?:^|[\s,]+)([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(?=[\s,.]|$)/
+  );
+  if (!match) return 0;
+
+  const numericValue = parseFloat(match[1]);
+  return isNaN(numericValue) ? 0 : numericValue;
+}
+
+function extractFirstNumberMemory(text) {
+  if (typeof text !== "string") return 0;
+  const match = text.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
+  if (!match) return 0;
+  const numericValue = parseFloat(match[0]);
+  return isNaN(numericValue) ? 0 : numericValue;
+}
+
+function saveArrayToJsonSync(array, filePath) {
+  try {
+    const jsonString = JSON.stringify(array, null, 2);
+    fs.writeFileSync(filePath, jsonString, "utf8");
+    console.log(`Saved to  ${filePath}`);
+    return true;
+  } catch (error) {
+    console.error("Save failed!", error.message);
+    return false;
+  }
+}
+
+async function monitorAndExecute(url, type, folder) {
+  const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
+  const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
   let page = null;
 
   try {
@@ -58,7 +93,9 @@ async function monitorAndExecute(url, folder) {
 
     console.log("Start socwatch...");
     const resultFileName = "result";
-    const command = `socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o .\\${folder}\\${resultFileName}`;
+    const command_memory = `socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o .\\${folder}\\${resultFileName}`;
+    const command_power = `socwatch.exe -t 120 -s 20 -f power -o .\\${folder}\\${resultFileName}`;
+    const command = type == "power" ? command_power : command_memory;
     await executeCommand(command);
 
     console.log("Wait 3 mins, socwatch needs 2 mins...");
@@ -74,15 +111,16 @@ async function monitorAndExecute(url, folder) {
     console.log("Parse results...");
     // await delay(ONE_MINS);
     // Parse results
-    const result = parseSocwatchResult(`.\\${folder}\\${resultFileName}.csv`);
+    const result = parseSocwatchResult(
+      type,
+      `.\\${folder}\\${resultFileName}.csv`
+    );
     return result;
   } catch (error) {
     console.error("Error:", error);
-
     if (context) {
       await context.close();
     }
-
     throw error;
   }
 }
@@ -192,7 +230,7 @@ function executeCommand(command) {
   });
 }
 
-function parseSocwatchResult(filename) {
+function parseSocwatchResult(type, filename) {
   try {
     const filePath = path.resolve(filename);
     if (!fs.existsSync(filePath)) {
@@ -203,12 +241,14 @@ function parseSocwatchResult(filename) {
     const lines = content.split("\n");
 
     // Find "Total ,                      ,"
-    const KEY = "Total ,                      ,";
+    const KEY_POWER = "CPU/Package_0, Power";
+    const KEY_MEMORY = "Total ,                      ,";
+    const KEY = type == "power" ? KEY_POWER : KEY_MEMORY;
     const targetLine = lines.find((line) => line.includes(KEY));
 
     if (!targetLine) {
       console.error(`Cannot find ${KEY}`);
-      return '';
+      return "";
     }
 
     return targetLine.trim();
@@ -218,57 +258,60 @@ function parseSocwatchResult(filename) {
   }
 }
 
-function saveArrayToJsonSync(array, filePath) {
-  try {
-    const jsonString = JSON.stringify(array, null, 2);
-    fs.writeFileSync(filePath, jsonString, "utf8");
-    console.log(`Saved to  ${filePath}`);
-    return true;
-  } catch (error) {
-    console.error("Save failed!", error.message);
-    return false;
-  }
-}
-
 async function main() {
   const start = performance.now();
   const info = args.info && args.info != "" ? args.info : "";
+  // memory, power
+  const type = args.type && args.type != "" ? args.type : "power";
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
 
   try {
     const renderers = ["webgpu", "webgl2"];
-    // const loops = [4, 0];
-    const loops = [4];
+    //const renderers = ["webgpu"];
+    const loops = [4, 0];
+    // const loops = [4];
     const results = [];
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://taste1981.github.io/workspace/videoeffect/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://10.239.47.2:8080/blur4.html?loop=${loop}#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
           const url =
             render === "webgpu"
-              ? `${baseUrl}&zeroCopy=on&directOutput=on&loop=${loop}`
-              : `${baseUrl}&loop=${loop}`;
+              ? `${baseUrl}&zeroCopy=on&directOutput=on`
+              : `${baseUrl}`;
 
-          const folder = createTimeStampedFolder(`${render}loop${loop}repeat${repeat}_i${i}`);
-          const result = await monitorAndExecute(url, folder);
+          const folder = createTimeStampedFolder(
+            `${type}_${render}_loop${loop}repeat${repeat}_i${i}`
+          );
+          const result = await monitorAndExecute(url, type, folder);
           saveArrayToJsonSync(result, `${folder}/1.json`);
-          const result2 = { render: render, loop: loop, repeat: repeat, result: extractFirstNumber(result) };
+          const result2 = {
+            render: render,
+            type: type,
+            loop: loop,
+            repeat: repeat,
+            result: extractFirstNumber(result, type),
+          };
           console.log(JSON.stringify(result2));
           results.push(result2);
         }
       }
     }
-    const readableTimestamp = new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).replace(/\//g, '-').replace(/:/g, '-').replace(' ', '_');
-    saveArrayToJsonSync(results, `summary-${readableTimestamp}.json`);
+    const readableTimestamp = new Date()
+      .toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+      .replace(/\//g, "-")
+      .replace(/:/g, "-")
+      .replace(" ", "_");
+    saveArrayToJsonSync(results, `summary-${type}-${readableTimestamp}.json`);
   } catch (error) {
     console.error("Fail:", error);
   }
@@ -286,12 +329,4 @@ module.exports = {
 
 if (require.main === module) {
   main();
-}
-
-function extractFirstNumber(text) {
-  if (typeof text !== 'string') return 0;
-  const match = text.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
-  if (!match) return 0;
-  const numericValue = parseFloat(match[0]);
-  return isNaN(numericValue) ? 0 : numericValue;
 }
