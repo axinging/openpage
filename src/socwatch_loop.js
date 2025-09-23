@@ -208,7 +208,7 @@ function parseSocwatchResult(filename) {
 
     if (!targetLine) {
       console.error(`Cannot find ${KEY}`);
-      return '';
+      return "";
     }
 
     return targetLine.trim();
@@ -242,31 +242,42 @@ async function main() {
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://10.239.47.2:8080/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://10.239.47.2:8080/blur4.html?renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
           const url =
             render === "webgpu"
               ? `${baseUrl}&zeroCopy=on&directOutput=on&loop=${loop}`
               : `${baseUrl}&loop=${loop}`;
 
-          const folder = createTimeStampedFolder(`${render}loop${loop}repeat${repeat}_i${i}`);
+          const folder = createTimeStampedFolder(
+            `${render}loop${loop}repeat${repeat}_i${i}`
+          );
           const result = await monitorAndExecute(url, folder);
           saveArrayToJsonSync(result, `${folder}/1.json`);
-          const result2 = { render: render, loop: loop, repeat: repeat, result: extractFirstNumber(result) };
+          const result2 = {
+            render: render,
+            loop: loop,
+            repeat: repeat,
+            result: extractFirstNumber(result),
+          };
           console.log(JSON.stringify(result2));
           results.push(result2);
         }
       }
     }
-    const readableTimestamp = new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).replace(/\//g, '-').replace(/:/g, '-').replace(' ', '_');
+    const readableTimestamp = new Date()
+      .toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+      .replace(/\//g, "-")
+      .replace(/:/g, "-")
+      .replace(" ", "_");
     saveArrayToJsonSync(results, `summary-${readableTimestamp}.json`);
   } catch (error) {
     console.error("Fail:", error);
@@ -288,7 +299,7 @@ if (require.main === module) {
 }
 
 function extractFirstNumber(text) {
-  if (typeof text !== 'string') return 0;
+  if (typeof text !== "string") return 0;
   const match = text.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
   if (!match) return 0;
   const numericValue = parseFloat(match[0]);

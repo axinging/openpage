@@ -8,8 +8,8 @@ const args = require("yargs").argv;
 const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
 const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
 
-    const TWO_MINS = 2 * 60 * 1000;
-    const ONE_MINS = 1 * 60 * 1000;
+const TWO_MINS = 2 * 60 * 1000;
+const ONE_MINS = 1 * 60 * 1000;
 
 async function monitorAndExecute(url, folder) {
   let browser = null;
@@ -211,7 +211,7 @@ function parseSocwatchResult(filename) {
 
     if (!targetLine) {
       console.error(`Cannot find ${KEY}`);
-      return '';
+      return "";
     }
 
     return targetLine.trim();
@@ -237,41 +237,51 @@ async function main() {
   const start = performance.now();
   const info = args.info && args.info != "" ? args.info : "";
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
-  
 
   try {
     const renderers = ["webgpu", "webgl2"];
-    // const loops = [4, 0];
-    const loops = [4];
+    const loops = [4, 0];
+    // const loops = [4];
     const results = [];
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://taste1981.github.io/workspace/videoeffect/blur4.html#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://10.239.47.2:8080/blur4.html?renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
           const url =
             render === "webgpu"
               ? `${baseUrl}&zeroCopy=on&directOutput=on&loop=${loop}`
               : `${baseUrl}&loop=${loop}`;
 
-          const folder = createTimeStampedFolder(`${render}-power_loop${loop}repeat${repeat}_i${i}`);
+          const folder = createTimeStampedFolder(
+            `${render}-power_loop${loop}repeat${repeat}_i${i}`
+          );
           const result = await monitorAndExecute(url, folder);
           saveArrayToJsonSync(result, `${folder}/1.json`);
-          const result2 = { render: render, loop: loop, repeat: repeat, result: extractFirstNumber(result) };
+          const result2 = {
+            render: render,
+            loop: loop,
+            repeat: repeat,
+            result: extractFirstNumber(result),
+          };
           console.log(JSON.stringify(result2));
           results.push(result2);
         }
       }
     }
-    const readableTimestamp = new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).replace(/\//g, '-').replace(/:/g, '-').replace(' ', '_');
+    const readableTimestamp = new Date()
+      .toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+      .replace(/\//g, "-")
+      .replace(/:/g, "-")
+      .replace(" ", "_");
     saveArrayToJsonSync(results, `summary-${readableTimestamp}.json`);
   } catch (error) {
     console.error("Fail:", error);
@@ -293,12 +303,14 @@ if (require.main === module) {
 }
 
 function extractFirstNumber(text) {
-  if (typeof text !== 'string') return 0;
-  
-  const match = text.match(/(?:^|[\s,]+)([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(?=[\s,.]|$)/);
-  
+  if (typeof text !== "string") return 0;
+
+  const match = text.match(
+    /(?:^|[\s,]+)([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(?=[\s,.]|$)/
+  );
+
   if (!match) return 0;
-  
+
   const numericValue = parseFloat(match[1]);
   return isNaN(numericValue) ? 0 : numericValue;
 }
