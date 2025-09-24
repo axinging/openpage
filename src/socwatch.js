@@ -142,15 +142,26 @@ function createTimeStampedFolder(prefix = "") {
   const folderPath = path.join(basePath, folderName);
 
   // Create folder
-  fs.mkdir(folderPath, { recursive: true }, (err) => {
+  const rootFolder = ".\\output\\";
+  fs.mkdir(rootFolder, { recursive: true }, (err) => {
     if (err) {
       console.error("Error creating folder:", err);
       return;
     }
-    console.log(`Folder created: ${folderPath}`);
+    console.log(`Folder created: ${rootFolder}`);
   });
 
-  return folderPath;
+  // Create folder
+  const currentFolder = rootFolder+"\\"+ folderPath;
+  fs.mkdir(currentFolder, { recursive: true }, (err) => {
+    if (err) {
+      console.error("Error creating folder:", err);
+      return;
+    }
+    console.log(`Folder created: ${currentFolder}`);
+  });
+
+  return currentFolder;
 }
 
 async function waitForLowCpuUsage(thresholdPercent) {
