@@ -258,6 +258,33 @@ function parseSocwatchResult(type, filename) {
   }
 }
 
+function generateMarkdownTable(file) {
+    try {
+        const rawData = fs.readFileSync(file + '.json', 'utf8');
+        const data = JSON.parse(rawData);
+        const tableData = data.map(item => {
+            if (typeof item.result !== 'number') {
+                throw new Error(`Invalid result value in record: ${JSON.stringify(item)}`);
+            }
+
+            return {
+                renderer: item.render.toUpperCase(),
+                loop: item.loop,
+                result: item.result.toFixed(2)
+            };
+        });
+        console.table(tableData);
+        let md = '| Renderer | Loop | Result |\n|---------|------|--------|\n';
+        tableData.forEach(({ renderer, loop, result }) => {
+            md += `| ${renderer} | ${loop} | ${result} |\n`;
+        });
+        fs.writeFileSync(file + '.md', md);
+    } catch (error) {
+        console.error('Error：', error.message);
+        process.exit(1);
+    }
+}
+
 async function main() {
   const start = performance.now();
   const info = args.info && args.info != "" ? args.info : "";
@@ -311,7 +338,9 @@ async function main() {
       .replace(/\//g, "-")
       .replace(/:/g, "-")
       .replace(" ", "_");
-    saveArrayToJsonSync(results, `summary-${type}-${readableTimestamp}.json`);
+    const summaryFile = `${type}-summary-${readableTimestamp}`;
+    saveArrayToJsonSync(results, `${summaryFile}.json`);
+    generateMarkdownTable(summaryFile);
   } catch (error) {
     console.error("Fail:", error);
   }
