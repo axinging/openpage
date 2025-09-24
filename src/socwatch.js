@@ -152,7 +152,7 @@ function createTimeStampedFolder(prefix = "") {
   });
 
   // Create folder
-  const currentFolder = rootFolder+"\\"+ folderPath;
+  const currentFolder = rootFolder + "\\" + folderPath;
   fs.mkdir(currentFolder, { recursive: true }, (err) => {
     if (err) {
       console.error("Error creating folder:", err);
@@ -270,30 +270,34 @@ function parseSocwatchResult(type, filename) {
 }
 
 function generateMarkdownTable(file) {
-    try {
-        const rawData = fs.readFileSync(file + '.json', 'utf8');
-        const data = JSON.parse(rawData);
-        const tableData = data.map(item => {
-            if (typeof item.result !== 'number') {
-                throw new Error(`Invalid result value in record: ${JSON.stringify(item)}`);
-            }
+  try {
+    const rawData = fs.readFileSync(file + '.json', 'utf8');
+    const data = JSON.parse(rawData);
+    const tableData = data.map(item => {
+      if (typeof item.result !== 'number') {
+        throw new Error(`Invalid result value in record: ${JSON.stringify(item)}`);
+      }
 
-            return {
-                renderer: item.render.toUpperCase(),
-                loop: item.loop,
-                result: item.result.toFixed(2)
-            };
-        });
-        console.table(tableData);
-        let md = '| Renderer | Loop | Result |\n|---------|------|--------|\n';
-        tableData.forEach(({ renderer, loop, result }) => {
-            md += `| ${renderer} | ${loop} | ${result} |\n`;
-        });
-        fs.writeFileSync(file + '.md', md);
-    } catch (error) {
-        console.error('Error：', error.message);
-        process.exit(1);
-    }
+      return {
+        renderer: item.render.toUpperCase(),
+        loop: item.loop,
+        result: item.result.toFixed(2)
+      };
+    });
+    console.table(tableData);
+    let md = '| Renderer | Loop | Result |\n|---------|------|--------|\n';
+    tableData.forEach(({ renderer, loop, result }) => {
+      md += `| ${renderer} | ${loop} | ${result} |\n`;
+    });
+    fs.writeFileSync(file + '.md', md);
+  } catch (error) {
+    console.error('Error:', error.message);
+    process.exit(1);
+  }
+}
+
+function getRenderer(renderer) {
+  return renderer.includes('_') ? renderer.split('_')[0] : renderer;
 }
 
 async function main() {
@@ -304,7 +308,12 @@ async function main() {
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
 
   try {
-    const renderers = ["webgpu", "webgl2"];
+    const renderersConfigs = {
+      webgpu: "&zeroCopy=on&directOutput=on",
+      webgpu_1ci0co: "&directOutput=on",
+      webgl2: ""
+    };
+    const renderers = Object.keys(renderersConfigs);
     //const renderers = ["webgpu"];
     const loops = [4, 0];
     // const loops = [4];
@@ -312,12 +321,9 @@ async function main() {
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://10.239.47.2:8080/blur4.html?loop=${loop}#renderer=${render}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const baseUrl = `https://10.239.47.2:8080/blur4.html?loop=${loop}#renderer=${getRenderer(render)}&fakeSegmentation=fakeSegmentation&displaySize=original`;
 
-          const url =
-            render === "webgpu"
-              ? `${baseUrl}&zeroCopy=on&directOutput=on`
-              : `${baseUrl}`;
+          const url = baseUrl + (renderersConfigs[render] || "");
 
           const folder = createTimeStampedFolder(
             `${type}_${render}_loop${loop}repeat${repeat}_i${i}`
@@ -329,6 +335,7 @@ async function main() {
             type: type,
             loop: loop,
             repeat: repeat,
+            url: url,
             result: extractFirstNumber(result, type),
           };
           console.log(JSON.stringify(result2));
