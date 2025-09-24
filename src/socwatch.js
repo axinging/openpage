@@ -300,12 +300,8 @@ function getRenderer(renderer) {
   return renderer.includes('_') ? renderer.split('_')[0] : renderer;
 }
 
-async function main() {
+async function socwatch(type, info, repeat) {
   const start = performance.now();
-  const info = args.info && args.info != "" ? args.info : "";
-  // memory, power
-  const type = args.type && args.type != "" ? args.type : "power";
-  const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
 
   try {
     const renderersConfigs = {
@@ -362,16 +358,22 @@ async function main() {
   } catch (error) {
     console.error("Fail:", error);
   }
+}
+
+async function main() {
+  const start = performance.now();
+  const info = args.info && args.info != "" ? args.info : "";
+  // memory, power
+  const type = args.type && args.type != "" ? args.type : "power";
+  const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
+  await socwatch(type, info, repeat);
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
 }
 
 module.exports = {
-  monitorAndExecute,
-  waitForLowCpuUsage,
-  getCpuUsage,
-  parseSocwatchResult,
+  socwatch,
 };
 
 if (require.main === module) {
