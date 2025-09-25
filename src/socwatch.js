@@ -32,12 +32,30 @@ function extractFirstNumberMemory(text) {
 
 function saveArrayToJsonSync(array, filePath) {
   try {
+    if (!array || !filePath) {
+      throw new Error('Array and filePath are required');
+    }
+
+    filePath = String(filePath);
+    const dirPath = path.dirname(filePath);
+    if (!fs.existsSync(dirPath)) {
+      console.log(`Directory does not exist, creating: ${dirPath}`);
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+
     const jsonString = JSON.stringify(array, null, 2);
     fs.writeFileSync(filePath, jsonString, "utf8");
-    console.log(`Saved to  ${filePath}`);
+    console.log(`Successfully saved to ${filePath}`);
     return true;
+
   } catch (error) {
     console.error("Save failed!", error.message);
+    if (error.code === 'ENOENT') {
+      console.error(`The directory path does not exist: ${path.dirname(filePath)}`);
+    } else if (error.code === 'EACCES') {
+      console.error(`Permission denied: ${filePath}`);
+    }
+
     return false;
   }
 }
@@ -149,7 +167,6 @@ function createTimeStampedFolder(rootFolder, prefix = "") {
     }
     console.log(`Folder created: ${rootFolder}`);
   });
-
   // Create folder
   const currentFolder = rootFolder + "\\" + folderPath;
   fs.mkdir(currentFolder, { recursive: true }, (err) => {
@@ -329,8 +346,8 @@ async function socwatch(type, info, repeat, isDryRun = false) {
           const folder = createTimeStampedFolder(rootFolder,
             `${type}_${render}_loop${loop}repeat${repeat}_i${i}`
           );
-          const result = isDryRun ? {} : await monitorAndExecute(url, type, folder);
-          saveArrayToJsonSync(result, `${folder}/1.json`);
+          const result = isDryRun ? { dryRun: true } : await monitorAndExecute(url, type, folder);
+          saveArrayToJsonSync(result, `${folder}\\1.json`);
           const result2 = {
             render: render,
             type: type,
