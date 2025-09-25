@@ -125,7 +125,7 @@ async function monitorAndExecute(url, type, folder) {
   }
 }
 
-function createTimeStampedFolder(prefix = "") {
+function createTimeStampedFolder(rootFolder, prefix = "") {
   const basePath = "./";
   // Get current timestamp
   const now = new Date();
@@ -142,7 +142,6 @@ function createTimeStampedFolder(prefix = "") {
   const folderPath = path.join(basePath, folderName);
 
   // Create folder
-  const rootFolder = ".\\output\\";
   fs.mkdir(rootFolder, { recursive: true }, (err) => {
     if (err) {
       console.error("Error creating folder:", err);
@@ -269,9 +268,15 @@ function parseSocwatchResult(type, filename) {
   }
 }
 
+function changeFileExtension(file, newExtension) {
+  const parsedPath = path.parse(file);
+  parsedPath.base = parsedPath.name + newExtension;
+  return path.format(parsedPath);
+}
+
 function generateMarkdownTable(file) {
   try {
-    const rawData = fs.readFileSync(file + '.json', 'utf8');
+    const rawData = fs.readFileSync(file, 'utf8');
     const data = JSON.parse(rawData);
     const tableData = data.map(item => {
       if (typeof item.result !== 'number') {
@@ -289,7 +294,7 @@ function generateMarkdownTable(file) {
     tableData.forEach(({ renderer, loop, result }) => {
       md += `| ${renderer} | ${loop} | ${result} |\n`;
     });
-    fs.writeFileSync(file + '.md', md);
+    fs.writeFileSync(changeFileExtension(file, ".md"), md);
   } catch (error) {
     console.error('Error:', error.message);
     process.exit(1);
@@ -300,8 +305,8 @@ function getRenderer(renderer) {
   return renderer.includes('_') ? renderer.split('_')[0] : renderer;
 }
 
-async function socwatch(type, info, repeat) {
-  const start = performance.now();
+async function socwatch(type, info, repeat, isDryRun = false) {
+  const rootFolder = ".\\output\\";
 
   try {
     const renderersConfigs = {
@@ -321,10 +326,10 @@ async function socwatch(type, info, repeat) {
 
           const url = baseUrl + (renderersConfigs[render] || "");
 
-          const folder = createTimeStampedFolder(
+          const folder = createTimeStampedFolder(rootFolder,
             `${type}_${render}_loop${loop}repeat${repeat}_i${i}`
           );
-          const result = await monitorAndExecute(url, type, folder);
+          const result = isDryRun ? {} : await monitorAndExecute(url, type, folder);
           saveArrayToJsonSync(result, `${folder}/1.json`);
           const result2 = {
             render: render,
@@ -352,8 +357,8 @@ async function socwatch(type, info, repeat) {
       .replace(/\//g, "-")
       .replace(/:/g, "-")
       .replace(" ", "_");
-    const summaryFile = `${type}-summary-${readableTimestamp}`;
-    saveArrayToJsonSync(results, `${summaryFile}.json`);
+    const summaryFile = `${rootFolder}\\${type}-summary-${readableTimestamp}.json`;
+    saveArrayToJsonSync(results, summaryFile);
     generateMarkdownTable(summaryFile);
   } catch (error) {
     console.error("Fail:", error);
@@ -362,11 +367,16 @@ async function socwatch(type, info, repeat) {
 
 async function main() {
   const start = performance.now();
+  // const args = require("yargs").argv;
   const info = args.info && args.info != "" ? args.info : "";
   // memory, power
   const type = args.type && args.type != "" ? args.type : "power";
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
-  await socwatch(type, info, repeat);
+  // const args = process.argv;
+  // const isDryRun = args.includes('--dry-run') || args.includes('--dryrun');
+  const isDryRun = args.dryRun || args.dryrun || false;
+  console.log(isDryRun);
+  await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun);
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
