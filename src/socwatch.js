@@ -384,15 +384,11 @@ async function socwatch(type, info, repeat, isDryRun = false) {
 
 async function main() {
   const start = performance.now();
-  // const args = require("yargs").argv;
   const info = args.info && args.info != "" ? args.info : "";
   // memory, power
   const type = args.type && args.type != "" ? args.type : "power";
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
-  // const args = process.argv;
-  // const isDryRun = args.includes('--dry-run') || args.includes('--dryrun');
   const isDryRun = args.dryRun || args.dryrun || false;
-  console.log(isDryRun);
   await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun);
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
