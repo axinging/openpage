@@ -33,7 +33,7 @@ function extractFirstNumberMemory(text) {
 function saveArrayToJsonSync(array, filePath) {
   try {
     if (!array || !filePath) {
-      throw new Error('Array and filePath are required');
+      throw new Error("Array and filePath are required");
     }
 
     filePath = String(filePath);
@@ -47,12 +47,13 @@ function saveArrayToJsonSync(array, filePath) {
     fs.writeFileSync(filePath, jsonString, "utf8");
     console.log(`Successfully saved to ${filePath}`);
     return true;
-
   } catch (error) {
     console.error("Save failed!", error.message);
-    if (error.code === 'ENOENT') {
-      console.error(`The directory path does not exist: ${path.dirname(filePath)}`);
-    } else if (error.code === 'EACCES') {
+    if (error.code === "ENOENT") {
+      console.error(
+        `The directory path does not exist: ${path.dirname(filePath)}`
+      );
+    } else if (error.code === "EACCES") {
       console.error(`Permission denied: ${filePath}`);
     }
 
@@ -293,33 +294,35 @@ function changeFileExtension(file, newExtension) {
 
 function generateMarkdownTable(file) {
   try {
-    const rawData = fs.readFileSync(file, 'utf8');
+    const rawData = fs.readFileSync(file, "utf8");
     const data = JSON.parse(rawData);
-    const tableData = data.map(item => {
-      if (typeof item.result !== 'number') {
-        throw new Error(`Invalid result value in record: ${JSON.stringify(item)}`);
+    const tableData = data.map((item) => {
+      if (typeof item.result !== "number") {
+        throw new Error(
+          `Invalid result value in record: ${JSON.stringify(item)}`
+        );
       }
 
       return {
         renderer: item.render.toUpperCase(),
         loop: item.loop,
-        result: item.result.toFixed(2)
+        result: item.result.toFixed(2),
       };
     });
     console.table(tableData);
-    let md = '| Renderer | Loop | Result |\n|---------|------|--------|\n';
+    let md = "| Renderer | Loop | Result |\n|---------|------|--------|\n";
     tableData.forEach(({ renderer, loop, result }) => {
       md += `| ${renderer} | ${loop} | ${result} |\n`;
     });
     fs.writeFileSync(changeFileExtension(file, ".md"), md);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error("Error:", error.message);
     process.exit(1);
   }
 }
 
 function getRenderer(renderer) {
-  return renderer.includes('_') ? renderer.split('_')[0] : renderer;
+  return renderer.includes("_") ? renderer.split("_")[0] : renderer;
 }
 
 async function socwatch(type, info, repeat, isDryRun = false) {
@@ -327,26 +330,31 @@ async function socwatch(type, info, repeat, isDryRun = false) {
 
   try {
     const renderersConfigs = {
-      webgpu: "&zeroCopy=on&directOutput=on",
-      webgpu_1ci0co: "&directOutput=on",
-      webgl2: ""
+      webgpucompute_1c: { zerocopy: 0, renderer: "webgpucompute" },
+      webgpugraphics_1c: { renderer: "webgpugraphics" },
+      webgpucompute_0c: { zerocopy: 1, renderer: "webgpucompute" },
+      webglgraphics: { renderer: "webgl" },
     };
     const renderers = Object.keys(renderersConfigs);
     //const renderers = ["webgpu"];
-    const loops = [4, 0];
+    const loops = [0];
     // const loops = [4];
     const results = [];
     for (const render of renderers) {
       for (const loop of loops) {
         for (let i = 0; i < repeat; i++) {
-          const baseUrl = `https://10.239.47.2:8080/blur4.html?loop=${loop}#renderer=${getRenderer(render)}&fakeSegmentation=fakeSegmentation&displaySize=original`;
+          const config = renderersConfigs[render];
+          const params = new URLSearchParams(config).toString();
+          const url = `https://10.239.47.2:8080/wblur.html?${params}`;
+          console.log(url);
 
-          const url = baseUrl + (renderersConfigs[render] || "");
-
-          const folder = createTimeStampedFolder(rootFolder,
+          const folder = createTimeStampedFolder(
+            rootFolder,
             `${type}_${render}_loop${loop}repeat${repeat}_i${i}`
           );
-          const result = isDryRun ? { dryRun: true } : await monitorAndExecute(url, type, folder);
+          const result = isDryRun
+            ? { dryRun: true }
+            : await monitorAndExecute(url, type, folder);
           saveArrayToJsonSync(result, `${folder}\\1.json`);
           const result2 = {
             render: render,
@@ -387,7 +395,7 @@ async function main() {
   const info = args.info && args.info != "" ? args.info : "";
   // memory, power
   const type = args.type && args.type != "" ? args.type : "power";
-  const repeat = args.repeat && args.repeat != "" ? args.repeat : 4;
+  const repeat = args.repeat && args.repeat != "" ? args.repeat : 5;
   const isDryRun = args.dryRun || args.dryrun || false;
   await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun);
   const end = performance.now();
