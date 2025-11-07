@@ -61,7 +61,7 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
-async function monitorAndExecute(url, type, folder) {
+async function monitorAndExecute(url, type, folder, isFastRun = false) {
   const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
   const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
   let page = null;
@@ -72,8 +72,8 @@ async function monitorAndExecute(url, type, folder) {
     await waitForLowCpuUsage(5);
 
     // Wait 2 mins, 2 * 60 * 1000
-    const TWO_MINS = 2 * 60 * 1000;
-    const ONE_MINS = 1 * 60 * 1000;
+    const TWO_MINS = isFastRun ? 10 * 1000 : 2 * 60 * 1000;
+    const ONE_MINS = isFastRun ? 10 * 1000 : 1 * 60 * 1000;
     await delay(TWO_MINS);
 
     console.log("Start browser...");
@@ -101,14 +101,22 @@ async function monitorAndExecute(url, type, folder) {
     console.log("Wait 1 mins after open page...");
     // Wait 1 mins
     await delay(ONE_MINS);
-
+    /*
     console.log("Click start button...");
     const startButton = await page.$("#startButton");
     if (startButton) {
       await startButton.click();
     } else {
       throw new Error("Cannot find #startButton");
-    }
+    }*/
+    console.log("Start video processing...");
+    await page.evaluate(() => {
+      if (typeof startVideoProcessing === "function") {
+        startVideoProcessing();
+      } else {
+        throw new Error("startVideoProcessing is not defined");
+      }
+    });
 
     console.log("Start socwatch...");
     const resultFileName = "result";
@@ -325,15 +333,63 @@ function getRenderer(renderer) {
   return renderer.includes("_") ? renderer.split("_")[0] : renderer;
 }
 
-async function socwatch(type, info, repeat, isDryRun = false) {
+async function socwatch(
+  type,
+  info,
+  repeat,
+  isDryRun = false,
+  isFastRun = false
+) {
   const rootFolder = ".\\output\\";
 
   try {
     const renderersConfigs = {
-      webgpucompute_1c: { zerocopy: 0, renderer: "webgpucompute" },
-      webgpugraphics_1c: { renderer: "webgpugraphics" },
-      webgpucompute_0c: { zerocopy: 1, renderer: "webgpucompute" },
-      webglgraphics: { renderer: "webgl" },
+      // test compute non-blur
+      webgpucompute_0c_noblur: {
+        renderer: "webgpu-compute",
+        zerocopy: true,
+        blur: false,
+      },
+      webgpucompute_1c_noblur: {
+        renderer: "webgpu-compute",
+        zerocopy: false,
+        blur: false,
+      },
+      // test compute blur
+      webgpucompute_0c_blur: {
+        renderer: "webgpu-compute",
+        zerocopy: true,
+        blur: true,
+      },
+      webgpucompute_1c_blur: {
+        renderer: "webgpu-compute",
+        zerocopy: false,
+        blur: true,
+      },
+      // test graphics non-blur
+      webgpugraphics_0c_noblur: {
+        renderer: "webgpu-graphics",
+        zerocopy: true,
+        blur: false,
+      },
+      webgpugraphics_1c_noblur: {
+        renderer: "webgpu-graphics",
+        zerocopy: false,
+        blur: false,
+      },
+      // test graphics blur
+      webgpugraphics_0c_blur: {
+        renderer: "webgpu-graphics",
+        zerocopy: true,
+        blur: true,
+      },
+      webgpugraphics_1c_blur: {
+        renderer: "webgpu-graphics",
+        zerocopy: false,
+        blur: true,
+      },
+      webglgraphics_noblur: { renderer: "webgl-graphics", blur: false },
+      webglgraphics_blur: { renderer: "webgl-graphics", blur: true },
     };
     const renderers = Object.keys(renderersConfigs);
     //const renderers = ["webgpu"];
@@ -345,7 +401,7 @@ async function socwatch(type, info, repeat, isDryRun = false) {
         for (let i = 0; i < repeat; i++) {
           const config = renderersConfigs[render];
           const params = new URLSearchParams(config).toString();
-          const url = `https://10.239.47.2:8080/wblur.html?${params}`;
+          const url = `https://10.239.47.16:8080/blur.html?${params}`;
           console.log(url);
 
           const folder = createTimeStampedFolder(
@@ -354,7 +410,7 @@ async function socwatch(type, info, repeat, isDryRun = false) {
           );
           const result = isDryRun
             ? { dryRun: true }
-            : await monitorAndExecute(url, type, folder);
+            : await monitorAndExecute(url, type, folder, isFastRun);
           saveArrayToJsonSync(result, `${folder}\\1.json`);
           const result2 = {
             render: render,
@@ -397,7 +453,8 @@ async function main() {
   const type = args.type && args.type != "" ? args.type : "power";
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 5;
   const isDryRun = args.dryRun || args.dryrun || false;
-  await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun);
+  const isFastRun = args.fastRun || args.fastrun || false;
+  await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun, isFastRun);
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
