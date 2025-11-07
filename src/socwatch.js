@@ -1,5 +1,5 @@
 const { chromium } = require("playwright");
-const { exec } = require("child_process");
+const { exec, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -64,6 +64,7 @@ function saveArrayToJsonSync(array, filePath) {
 async function monitorAndExecute(url, type, folder, isFastRun = false) {
   const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
   const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
+  // const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "chrome-user-data-"));
   let page = null;
 
   try {
@@ -88,6 +89,8 @@ async function monitorAndExecute(url, type, folder, isFastRun = false) {
         "--start-maximized",
         "--disable-web-security",
         "--allow-running-insecure-content",
+        "--disable-session-crashed-bubble",
+        "--hide-crash-restore-bubble",
       ],
     });
 
@@ -142,14 +145,17 @@ async function monitorAndExecute(url, type, folder, isFastRun = false) {
       type,
       `.\\${folder}\\${resultFileName}.csv`
     );
+    //fs.rmSync(userDataDir, { recursive: true, force: true });
     return result;
   } catch (error) {
     console.error("Error:", error);
     if (context) {
       await context.close();
     }
+    // fs.rmSync(userDataDir, { recursive: true, force: true });
     throw error;
   }
+  // Clean up
 }
 
 function createTimeStampedFolder(rootFolder, prefix = "") {
@@ -446,7 +452,26 @@ async function socwatch(
   }
 }
 
+function starNotification() {
+  try {
+    execSync('powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 0 -PropertyType DWord -Force"');
+    console.log("Start Focus Assist.");
+  } catch (e) {
+    console.error("Set Focus Assist failed:", e.message);
+  }
+}
+
+function stopNotification() {
+  try {
+    execSync('powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 2 -PropertyType DWord -Force"');
+    console.log("Start Focus Assist.");
+  } catch (e) {
+    console.error("Set Focus Assist failed:", e.message);
+  }
+}
+
 async function main() {
+  stopNotification();
   const start = performance.now();
   const info = args.info && args.info != "" ? args.info : "";
   // memory, power
@@ -458,6 +483,7 @@ async function main() {
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
+  starNotification();
 }
 
 module.exports = {
