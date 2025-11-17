@@ -61,9 +61,15 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
-async function monitorAndExecute(url, type, folder, isFastRun = false) {
-  const browserPath = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
-  const userDataDir = `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
+async function monitorAndExecute(
+  url,
+  type,
+  folder,
+  browserConfig,
+  isFastRun = false
+) {
+  const browserPath = browserConfig.browserPath; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
+  const userDataDir = browserConfig.userDataDir; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
   // const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "chrome-user-data-"));
   let page = null;
 
@@ -85,13 +91,7 @@ async function monitorAndExecute(url, type, folder, isFastRun = false) {
       ignoreHTTPSErrors: true,
       headless: false,
       permissions: ["camera", "microphone", "geolocation"],
-      args: [
-        "--start-maximized",
-        "--disable-web-security",
-        "--allow-running-insecure-content",
-        "--disable-session-crashed-bubble",
-        "--hide-crash-restore-bubble",
-      ],
+      args: browserConfig.args,
     });
 
     page = await context.newPage();
@@ -152,7 +152,7 @@ async function monitorAndExecute(url, type, folder, isFastRun = false) {
     if (context) {
       await context.close();
     }
-    // fs.rmSync(userDataDir, { recursive: true, force: true });
+    //fs.rmSync(userDataDir, { recursive: true, force: true });
     throw error;
   }
   // Clean up
@@ -339,6 +339,16 @@ function getRenderer(renderer) {
   return renderer.includes("_") ? renderer.split("_")[0] : renderer;
 }
 
+function saveBrowserConfigToRootFolder(browserConfig, rootFolder) {
+  try {
+    const filePath = path.join(rootFolder, "browser_config.json");
+    fs.writeFileSync(filePath, JSON.stringify(browserConfig, null, 2), "utf8");
+    console.log(`Browser config saved to: ${filePath}`);
+  } catch (error) {
+    console.error("Failed to save browser config:", error.message);
+  }
+}
+
 async function socwatch(
   type,
   info,
@@ -346,31 +356,46 @@ async function socwatch(
   isDryRun = false,
   isFastRun = false
 ) {
-  const rootFolder = ".\\output\\";
+  const rootFolder = `.\\output_${info}`;
+  const browserConfig = {
+    browserPath: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`,
+    userDataDir: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`,
+    args: [
+      "--start-maximized",
+      "--disable-web-security",
+      "--allow-running-insecure-content",
+      "--disable-session-crashed-bubble",
+      "--hide-crash-restore-bubble",
+      "--enable-webgpu-developer-features  --enable-unsafe-webgpu --use-webgpu-adapter=d3d11",
+    ],
+  };
 
   try {
     const renderersConfigs = {
       // test compute non-blur
-      webgpucompute_0c_noblur: {
+      webgpucompute_0c_noblur_do: {
         renderer: "webgpu-compute",
         zerocopy: true,
         blur: false,
+        directoutput: true,
       },
-      webgpucompute_1c_noblur: {
+      webgpucompute_1c_noblur_do: {
         renderer: "webgpu-compute",
         zerocopy: false,
         blur: false,
+        directoutput: true,
       },
-      // test compute blur
-      webgpucompute_0c_blur: {
+      webgpucompute_0c_noblur_nodo: {
         renderer: "webgpu-compute",
         zerocopy: true,
-        blur: true,
+        blur: false,
+        directoutput: false,
       },
-      webgpucompute_1c_blur: {
+      webgpucompute_1c_noblur_nodo: {
         renderer: "webgpu-compute",
         zerocopy: false,
-        blur: true,
+        blur: false,
+        directoutput: false,
       },
       // test graphics non-blur
       webgpugraphics_0c_noblur: {
@@ -383,19 +408,7 @@ async function socwatch(
         zerocopy: false,
         blur: false,
       },
-      // test graphics blur
-      webgpugraphics_0c_blur: {
-        renderer: "webgpu-graphics",
-        zerocopy: true,
-        blur: true,
-      },
-      webgpugraphics_1c_blur: {
-        renderer: "webgpu-graphics",
-        zerocopy: false,
-        blur: true,
-      },
       webglgraphics_noblur: { renderer: "webgl-graphics", blur: false },
-      webglgraphics_blur: { renderer: "webgl-graphics", blur: true },
     };
     const renderers = Object.keys(renderersConfigs);
     //const renderers = ["webgpu"];
@@ -407,7 +420,7 @@ async function socwatch(
         for (let i = 0; i < repeat; i++) {
           const config = renderersConfigs[render];
           const params = new URLSearchParams(config).toString();
-          const url = `https://10.239.47.16:8080/blur.html?${params}`;
+          const url = `https://10.239.47.2:8080/blur.html?${params}`;
           console.log(url);
 
           const folder = createTimeStampedFolder(
@@ -416,7 +429,13 @@ async function socwatch(
           );
           const result = isDryRun
             ? { dryRun: true }
-            : await monitorAndExecute(url, type, folder, isFastRun);
+            : await monitorAndExecute(
+              url,
+              type,
+              folder,
+              browserConfig,
+              isFastRun
+            );
           saveArrayToJsonSync(result, `${folder}\\1.json`);
           const result2 = {
             render: render,
@@ -446,15 +465,18 @@ async function socwatch(
       .replace(" ", "_");
     const summaryFile = `${rootFolder}\\${type}-summary-${readableTimestamp}.json`;
     saveArrayToJsonSync(results, summaryFile);
+    saveBrowserConfigToRootFolder(browserConfig, rootFolder);
     generateMarkdownTable(summaryFile);
   } catch (error) {
     console.error("Fail:", error);
   }
 }
 
-function starNotification() {
+function startNotification() {
   try {
-    execSync('powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 0 -PropertyType DWord -Force"');
+    execSync(
+      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 0 -PropertyType DWord -Force"'
+    );
     console.log("Start Focus Assist.");
   } catch (e) {
     console.error("Set Focus Assist failed:", e.message);
@@ -463,7 +485,9 @@ function starNotification() {
 
 function stopNotification() {
   try {
-    execSync('powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 2 -PropertyType DWord -Force"');
+    execSync(
+      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 2 -PropertyType DWord -Force"'
+    );
     console.log("Start Focus Assist.");
   } catch (e) {
     console.error("Set Focus Assist failed:", e.message);
@@ -483,7 +507,7 @@ async function main() {
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);
-  starNotification();
+  startNotification();
 }
 
 module.exports = {
