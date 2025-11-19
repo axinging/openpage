@@ -104,15 +104,17 @@ async function monitorAndExecute(
     console.log("Wait 1 mins after open page...");
     // Wait 1 mins
     await delay(ONE_MINS);
-    /*
+
     console.log("Click start button...");
     const startButton = await page.$("#startButton");
     if (startButton) {
       await startButton.click();
     } else {
       throw new Error("Cannot find #startButton");
-    }*/
+    }
+
     console.log("Start video processing...");
+    /*
     await page.evaluate(() => {
       if (typeof startVideoProcessing === "function") {
         startVideoProcessing();
@@ -120,6 +122,7 @@ async function monitorAndExecute(
         throw new Error("startVideoProcessing is not defined");
       }
     });
+    */
 
     console.log("Start socwatch...");
     const resultFileName = "result";
@@ -366,88 +369,71 @@ async function socwatch(
       "--allow-running-insecure-content",
       "--disable-session-crashed-bubble",
       "--hide-crash-restore-bubble",
-      "--enable-webgpu-developer-features  --enable-unsafe-webgpu --use-webgpu-adapter=d3d11",
+      // "--enable-webgpu-developer-features  --enable-unsafe-webgpu --use-webgpu-adapter=d3d11",
     ],
   };
+  /*
+https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=compute&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original
+
+https://10.239.47.2:8080/blur.html#renderer=webgl2&shaderType=fragment&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original
+
+*/
 
   try {
-    const renderersConfigs = {
-      // test compute non-blur
-      webgpucompute_0c_noblur_do: {
-        renderer: "webgpu-compute",
-        zerocopy: true,
-        blur: false,
-        directoutput: true,
-      },
-      webgpucompute_1c_noblur_do: {
-        renderer: "webgpu-compute",
-        zerocopy: false,
-        blur: false,
-        directoutput: true,
-      },
-      webgpucompute_0c_noblur_nodo: {
-        renderer: "webgpu-compute",
-        zerocopy: true,
-        blur: false,
-        directoutput: false,
-      },
-      webgpucompute_1c_noblur_nodo: {
-        renderer: "webgpu-compute",
-        zerocopy: false,
-        blur: false,
-        directoutput: false,
-      },
-      // test graphics non-blur
-      webgpugraphics_0c_noblur: {
-        renderer: "webgpu-graphics",
-        zerocopy: true,
-        blur: false,
-      },
-      webgpugraphics_1c_noblur: {
-        renderer: "webgpu-graphics",
-        zerocopy: false,
-        blur: false,
-      },
-      webglgraphics_noblur: { renderer: "webgl-graphics", blur: false },
-    };
-    const renderers = Object.keys(renderersConfigs);
-    //const renderers = ["webgpu"];
-    const loops = [0];
+    const testUrls = [
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=compute&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=compute&zeroCopy=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=compute&zeroCopy=on&directOutput=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=compute&directOutput=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=fragment&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=fragment&zeroCopy=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=fragment&zeroCopy=on&directOutput=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgpu&shaderType=fragment&directOutput=on&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+      "https://10.239.47.2:8080/blur.html#renderer=webgl2&shaderType=fragment&segmenter=triangle&webnnDevice=gpu&webrtcCodec=video%2FH264&displaySize=original",
+    ];
+
     // const loops = [4];
     const results = [];
-    for (const renderer of renderers) {
-      for (const loop of loops) {
-        for (let i = 0; i < repeat; i++) {
-          const config = renderersConfigs[renderer];
-          const params = new URLSearchParams(config).toString();
-          const url = `https://10.239.47.2:8080/blur.html?${params}`;
-          console.log(url);
+    for (const url of testUrls) {
+      for (let i = 0; i < repeat; i++) {
+        console.log(url);
 
-          const folder = createTimeStampedFolder(
-            rootFolder,
-            `${type}_${renderer}_loop${loop}repeat${repeat}_i${i}`
-          );
-          const result = isDryRun
-            ? { dryRun: true }
-            : await monitorAndExecute(
-                url,
-                type,
-                folder,
-                browserConfig,
-                isFastRun
-              );
-          saveArrayToJsonSync(result, `${folder}\\1.json`);
-          const result2 = {
-            renderer: renderer,
-            type: type,
-            loop: loop,
-            repeat: repeat,
-            url: url,
-            result: extractFirstNumber(result, type),
-          };
-          console.log(JSON.stringify(result2));
-          results.push(result2);
-        }
+        // Use a readable name for the folder based on URL (extract renderer and shaderType)
+        const urlObj = new URL(url);
+        const hashParams = Object.fromEntries(
+          new URLSearchParams(urlObj.hash.slice(1))
+        );
+        const renderer = hashParams.renderer || "unknown";
+        const shaderType = hashParams.shaderType || "unknown";
+        const zeroCopy = hashParams.zeroCopy || "off";
+        const directOutput = hashParams.directOutput || "off";
+
+        const folder = createTimeStampedFolder(
+          rootFolder,
+          `${type}_${renderer}_${shaderType}_zeroCopy_${zeroCopy}_directOutput_${directOutput}_i${i}`
+        );
+        const result = isDryRun
+          ? { dryRun: true }
+          : await monitorAndExecute(
+              url,
+              type,
+              folder,
+              browserConfig,
+              isFastRun
+            );
+        saveArrayToJsonSync(result, `${folder}\\1.json`);
+        const result2 = {
+          renderer: renderer,
+          shaderType: shaderType,
+          zeroCopy,
+          directOutput,
+          type: type,
+          repeat: repeat,
+          url: url,
+          result: extractFirstNumber(result, type),
+        };
+        console.log(JSON.stringify(result2));
+        results.push(result2);
       }
     }
     const readableTimestamp = new Date()
