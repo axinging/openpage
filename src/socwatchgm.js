@@ -321,15 +321,15 @@ function generateMarkdownTable(file) {
       }
 
       return {
-        renderer: item.renderer.toUpperCase(),
+        config: configToString(item.config).toLowerCase(),
         loop: item.loop,
         result: item.result.toFixed(2),
       };
     });
     console.table(tableData);
-    let md = "| Renderer | Loop | Result |\n|---------|------|--------|\n";
-    tableData.forEach(({ renderer, loop, result }) => {
-      md += `| ${renderer} | ${loop} | ${result} |\n`;
+    let md = "| Config | Loop | Result |\n|---------|------|--------|\n";
+    tableData.forEach(({ config, loop, result }) => {
+      md += `| ${config} | ${loop} | ${result} |\n`;
     });
     fs.writeFileSync(changeFileExtension(file, ".md"), md);
   } catch (error) {
@@ -350,6 +350,12 @@ function saveBrowserConfigToRootFolder(browserConfig, rootFolder) {
   } catch (error) {
     console.error("Failed to save browser config:", error.message);
   }
+}
+
+function configToString(config) {
+  return Object.entries(config)
+    .map(([key, value]) => `${key}-${value}`)
+    .join("_");
 }
 
 async function socwatch(
@@ -423,11 +429,11 @@ https://10.239.47.2:8080/blur.html#renderer=webgl2&shaderType=fragment&segmenter
             );
         saveArrayToJsonSync(result, `${folder}\\1.json`);
         const result2 = {
-          renderer: renderer,
-          shaderType: shaderType,
-          zeroCopy,
-          directOutput,
-          type: type,
+          config: {renderer: renderer,
+            shaderType: shaderType,
+            zeroCopy,
+            directOutput,
+            type: type},
           repeat: repeat,
           url: url,
           result: extractFirstNumber(result, type),

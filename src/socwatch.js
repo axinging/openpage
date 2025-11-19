@@ -318,15 +318,15 @@ function generateMarkdownTable(file) {
       }
 
       return {
-        renderer: item.renderer.toUpperCase(),
+        config: configToString(item.config).toLowerCase(),
         loop: item.loop,
         result: item.result.toFixed(2),
       };
     });
     console.table(tableData);
     let md = "| Renderer | Loop | Result |\n|---------|------|--------|\n";
-    tableData.forEach(({ renderer, loop, result }) => {
-      md += `| ${renderer} | ${loop} | ${result} |\n`;
+    tableData.forEach(({ config, loop, result }) => {
+      md += `| ${config} | ${loop} | ${result} |\n`;
     });
     fs.writeFileSync(changeFileExtension(file, ".md"), md);
   } catch (error) {
@@ -347,6 +347,12 @@ function saveBrowserConfigToRootFolder(browserConfig, rootFolder) {
   } catch (error) {
     console.error("Failed to save browser config:", error.message);
   }
+}
+
+function configToString(config) {
+  return Object.entries(config)
+    .map(([key, value]) => `${key}-${value}`)
+    .join("_");
 }
 
 async function socwatch(
@@ -425,7 +431,7 @@ async function socwatch(
 
           const folder = createTimeStampedFolder(
             rootFolder,
-            `${type}_${renderer}_loop${loop}repeat${repeat}_i${i}`
+            `${type}_${configToString(config)}_loop${loop}repeat${repeat}_i${i}`
           );
           const result = isDryRun
             ? { dryRun: true }
@@ -438,7 +444,7 @@ async function socwatch(
               );
           saveArrayToJsonSync(result, `${folder}\\1.json`);
           const result2 = {
-            renderer: renderer,
+            config: config,
             type: type,
             loop: loop,
             repeat: repeat,
