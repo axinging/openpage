@@ -61,105 +61,6 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
-async function monitorAndExecute(
-  url,
-  type,
-  folder,
-  browserConfig,
-  isFastRun = false
-) {
-  const browserPath = browserConfig.browserPath; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
-  const userDataDir = browserConfig.userDataDir; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
-  // const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "chrome-user-data-"));
-  let page = null;
-
-  try {
-    console.log("Wait 2 mins till CPU usage < 5%...");
-    // Wait 5%
-    await waitForLowCpuUsage(5);
-
-    // Wait 2 mins, 2 * 60 * 1000
-    const TWO_MINS = isFastRun ? 10 * 1000 : 2 * 60 * 1000;
-    const ONE_MINS = isFastRun ? 10 * 1000 : 1 * 60 * 1000;
-    await delay(TWO_MINS);
-
-    console.log("Start browser...");
-    var context = await chromium.launchPersistentContext(userDataDir, {
-      headless: false,
-      executablePath: browserPath,
-      viewport: null,
-      ignoreHTTPSErrors: true,
-      headless: false,
-      permissions: ["camera", "microphone", "geolocation"],
-      args: browserConfig.args,
-    });
-
-    page = await context.newPage();
-
-    console.log(`Open: ${url}`);
-    await page.goto(url, {
-      waitUntil: "networkidle",
-    });
-
-    console.log("Wait 1 mins after open page...");
-    // Wait 1 mins
-    await delay(ONE_MINS);
-
-    console.log("Click start button...");
-    const startButton = await page.$("#startButton");
-    if (startButton) {
-      await startButton.click();
-    } else {
-      throw new Error("Cannot find #startButton");
-    }
-
-    console.log("Start video processing...");
-    /*
-    await page.evaluate(() => {
-      if (typeof startVideoProcessing === "function") {
-        startVideoProcessing();
-      } else {
-        throw new Error("startVideoProcessing is not defined");
-      }
-    });
-    */
-
-    console.log("Start socwatch...");
-    const resultFileName = "result";
-    const command_memory = `socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o .\\${folder}\\${resultFileName}`;
-    const command_power = `socwatch.exe -t 120 -s 20 -f power -o .\\${folder}\\${resultFileName}`;
-    const command = type == "power" ? command_power : command_memory;
-    await executeCommand(command);
-
-    console.log("Wait 3 mins, socwatch needs 2 mins...");
-    // Wait 3 mins
-    const THREE_MINS = 3 * 60 * 1000;
-    await delay(THREE_MINS);
-
-    console.log("Close browser...");
-
-    await context.close();
-    context = null;
-
-    console.log("Parse results...");
-    // await delay(ONE_MINS);
-    // Parse results
-    const result = parseSocwatchResult(
-      type,
-      `.\\${folder}\\${resultFileName}.csv`
-    );
-    //fs.rmSync(userDataDir, { recursive: true, force: true });
-    return result;
-  } catch (error) {
-    console.error("Error:", error);
-    if (context) {
-      await context.close();
-    }
-    //fs.rmSync(userDataDir, { recursive: true, force: true });
-    throw error;
-  }
-  // Clean up
-}
 
 function createTimeStampedFolder(rootFolder, prefix = "") {
   const basePath = "./";
@@ -252,6 +153,28 @@ function getCpuUsage() {
       resolve(cpuUsage);
     }, 100);
   });
+}
+
+function startNotification() {
+  try {
+    execSync(
+      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 0 -PropertyType DWord -Force"'
+    );
+    console.log("Start Focus Assist.");
+  } catch (e) {
+    console.error("Set Focus Assist failed:", e.message);
+  }
+}
+
+function stopNotification() {
+  try {
+    execSync(
+      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 2 -PropertyType DWord -Force"'
+    );
+    console.log("Start Focus Assist.");
+  } catch (e) {
+    console.error("Set Focus Assist failed:", e.message);
+  }
 }
 
 function delay(ms) {
@@ -357,6 +280,107 @@ function configToString(config) {
     .map(([key, value]) => `${key}-${value}`)
     .join("_");
 }
+
+async function monitorAndExecute(
+  url,
+  type,
+  folder,
+  browserConfig,
+  isFastRun = false
+) {
+  const browserPath = browserConfig.browserPath; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`;
+  const userDataDir = browserConfig.userDataDir; //`${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`;
+  // const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "chrome-user-data-"));
+  let page = null;
+
+  try {
+    console.log("Wait 2 mins till CPU usage < 5%...");
+    // Wait 5%
+    await waitForLowCpuUsage(5);
+
+    // Wait 2 mins, 2 * 60 * 1000
+    const TWO_MINS = isFastRun ? 10 * 1000 : 2 * 60 * 1000;
+    const ONE_MINS = isFastRun ? 10 * 1000 : 1 * 60 * 1000;
+    await delay(TWO_MINS);
+
+    console.log("Start browser...");
+    var context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false,
+      executablePath: browserPath,
+      viewport: null,
+      ignoreHTTPSErrors: true,
+      headless: false,
+      permissions: ["camera", "microphone", "geolocation"],
+      args: browserConfig.args,
+    });
+
+    page = await context.newPage();
+
+    console.log(`Open: ${url}`);
+    await page.goto(url, {
+      waitUntil: "networkidle",
+    });
+
+    console.log("Wait 1 mins after open page...");
+    // Wait 1 mins
+    await delay(ONE_MINS);
+
+    console.log("Click start button...");
+    const startButton = await page.$("#startButton");
+    if (startButton) {
+      await startButton.click();
+    } else {
+      throw new Error("Cannot find #startButton");
+    }
+
+    console.log("Start video processing...");
+    /*
+    await page.evaluate(() => {
+      if (typeof startVideoProcessing === "function") {
+        startVideoProcessing();
+      } else {
+        throw new Error("startVideoProcessing is not defined");
+      }
+    });
+    */
+
+    console.log("Start socwatch...");
+    const resultFileName = "result";
+    const command_memory = `socwatch.exe -f cpu -f gfx -f ddr-bw -t 120 -s 20 -o .\\${folder}\\${resultFileName}`;
+    const command_power = `socwatch.exe -t 120 -s 20 -f power -o .\\${folder}\\${resultFileName}`;
+    const command = type == "power" ? command_power : command_memory;
+    await executeCommand(command);
+
+    console.log("Wait 3 mins, socwatch needs 2 mins...");
+    // Wait 3 mins
+    const THREE_MINS = 3 * 60 * 1000;
+    await delay(THREE_MINS);
+
+    console.log("Close browser...");
+
+    await context.close();
+    context = null;
+
+    console.log("Parse results...");
+    // await delay(ONE_MINS);
+    // Parse results
+    const result = parseSocwatchResult(
+      type,
+      `.\\${folder}\\${resultFileName}.csv`
+    );
+    //fs.rmSync(userDataDir, { recursive: true, force: true });
+    return result;
+  } catch (error) {
+    console.error("Error:", error);
+    if (context) {
+      await context.close();
+    }
+    //fs.rmSync(userDataDir, { recursive: true, force: true });
+    throw error;
+  }
+  // Clean up
+}
+
 
 async function socwatch(
   type,
@@ -464,27 +488,7 @@ https://10.239.47.2:8080/blur.html#renderer=webgl2&shaderType=fragment&segmenter
   }
 }
 
-function startNotification() {
-  try {
-    execSync(
-      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 0 -PropertyType DWord -Force"'
-    );
-    console.log("Start Focus Assist.");
-  } catch (e) {
-    console.error("Set Focus Assist failed:", e.message);
-  }
-}
 
-function stopNotification() {
-  try {
-    execSync(
-      'powershell.exe -Command "New-ItemProperty -Path HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings -Name FocusAssist -Value 2 -PropertyType DWord -Force"'
-    );
-    console.log("Start Focus Assist.");
-  } catch (e) {
-    console.error("Set Focus Assist failed:", e.message);
-  }
-}
 
 async function main() {
   stopNotification();
