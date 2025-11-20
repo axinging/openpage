@@ -22,8 +22,8 @@ const {
   generateMarkdownTable,
   getRenderer,
   saveBrowserConfigToRootFolder,
-  configToString
-} = require('./socwatch_util');
+  configToString,
+} = require("./socwatch_util");
 
 async function monitorAndExecute(
   url,
@@ -40,11 +40,11 @@ async function monitorAndExecute(
   try {
     console.log("Wait 2 mins till CPU usage < 5%...");
     // Wait 5%
-    await waitForLowCpuUsage(5);
+    isFastRun ? await waitForLowCpuUsage(50) : await waitForLowCpuUsage(5);
 
     // Wait 2 mins, 2 * 60 * 1000
-    const TWO_MINS = isFastRun ? 10 * 1000 : 2 * 60 * 1000;
-    const ONE_MINS = isFastRun ? 10 * 1000 : 1 * 60 * 1000;
+    const TWO_MINS = isFastRun ? 5 * 1000 : 2 * 60 * 1000;
+    const ONE_MINS = isFastRun ? 5 * 1000 : 1 * 60 * 1000;
     await delay(TWO_MINS);
 
     console.log("Start browser...");
@@ -123,48 +123,36 @@ async function monitorAndExecute(
 }
 
 async function socwatch(
-  type,
-  info,
-  repeat,
+  type = "power",
+  browserConfig = "",
+  info = "",
+  repeat = 5,
   isDryRun = false,
   isFastRun = false
 ) {
   const rootFolder = `.\\output_${info}`;
-  const browserConfig = {
-    browserPath: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`,
-    userDataDir: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data11`,
-    args: [
-      "--start-maximized",
-      "--disable-web-security",
-      "--allow-running-insecure-content",
-      "--disable-session-crashed-bubble",
-      "--hide-crash-restore-bubble",
-      "--enable-webgpu-developer-features  --enable-unsafe-webgpu --use-webgpu-adapter=d3d11",
-    ],
-  };
-
   try {
     const renderersConfigs = {
       // test compute non-blur
-      webgpucompute_0c_noblur_do: {
+      webgpucompute_0c_noblur_1directoutput: {
         renderer: "webgpu-compute",
         zerocopy: true,
         blur: false,
         directoutput: true,
       },
-      webgpucompute_1c_noblur_do: {
+      webgpucompute_1c_noblur_1directoutput: {
         renderer: "webgpu-compute",
         zerocopy: false,
         blur: false,
         directoutput: true,
       },
-      webgpucompute_0c_noblur_nodo: {
+      webgpucompute_0c_noblur_0directoutput: {
         renderer: "webgpu-compute",
         zerocopy: true,
         blur: false,
         directoutput: false,
       },
-      webgpucompute_1c_noblur_nodo: {
+      webgpucompute_1c_noblur_0directoutput: {
         renderer: "webgpu-compute",
         zerocopy: false,
         blur: false,
@@ -189,38 +177,35 @@ async function socwatch(
     // const loops = [4];
     const results = [];
     for (const renderer of renderers) {
-      for (const loop of loops) {
-        for (let i = 0; i < repeat; i++) {
-          const config = renderersConfigs[renderer];
-          const params = new URLSearchParams(config).toString();
-          const url = `https://10.239.47.2:8080/blur.html?${params}`;
-          console.log(url);
+      for (let i = 0; i < repeat; i++) {
+        const config = renderersConfigs[renderer];
+        const params = new URLSearchParams(config).toString();
+        const url = `https://10.239.47.2:8080/blur.html?autostart=false&${params}`;
+        console.log(url);
 
-          const folder = createTimeStampedFolder(
-            rootFolder,
-            `${type}_${configToString(config)}_loop${loop}repeat${repeat}_i${i}`
-          );
-          const result = isDryRun
-            ? { dryRun: true }
-            : await monitorAndExecute(
-                url,
-                type,
-                folder,
-                browserConfig,
-                isFastRun
-              );
-          saveArrayToJsonSync(result, `${folder}\\1.json`);
-          const result2 = {
-            config: config,
-            type: type,
-            loop: loop,
-            repeat: repeat,
-            url: url,
-            result: extractFirstNumber(result, type),
-          };
-          console.log(JSON.stringify(result2));
-          results.push(result2);
-        }
+        const folder = createTimeStampedFolder(
+          rootFolder,
+          `${type}_${configToString(config)}_repeat${repeat}_i${i}`
+        );
+        const result = isDryRun
+          ? { dryRun: true }
+          : await monitorAndExecute(
+              url,
+              type,
+              folder,
+              browserConfig,
+              isFastRun
+            );
+        saveArrayToJsonSync(result, `${folder}\\1.json`);
+        const result2 = {
+          config: config,
+          type: type,
+          repeat: repeat,
+          url: url,
+          result: extractFirstNumber(result, type),
+        };
+        console.log(JSON.stringify(result2));
+        results.push(result2);
       }
     }
     const readableTimestamp = new Date()
@@ -245,6 +230,48 @@ async function socwatch(
   }
 }
 
+function createBrowserConfig(backend) {
+  const backendArg =
+    !backend || backend === "" ? "" : `--use-webgpu-adapter=${backend}`;
+  if (backend) {
+    args.push(`--use-webgpu-adapter=${backend}`);
+  }
+  return {
+    browserPath: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`,
+    userDataDir: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data1111`,
+    args: [
+      "--start-maximized",
+      "--disable-web-security",
+      "--allow-running-insecure-content",
+      "--disable-session-crashed-bubble",
+      "--hide-crash-restore-bubble",
+      `--enable-webgpu-developer-features  --enable-unsafe-webgpu ${backendArg}`,
+      // If put backendArg in another line, playwright reports No available adapters.
+      // backendArg,
+    ],
+  };
+}
+
+function createBrowserConfig2(backend) {
+  const args = [
+    "--start-maximized",
+    "--disable-web-security",
+    "--allow-running-insecure-content",
+    "--disable-session-crashed-bubble",
+    "--hide-crash-restore-bubble",
+    "--enable-webgpu-developer-features",
+    "--enable-unsafe-webgpu",
+  ];
+  if (backend) {
+    args.push(`--use-webgpu-adapter=${backend}`);
+  }
+  return {
+    browserPath: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/Application/chrome.exe`,
+    userDataDir: `${process.env.LOCALAPPDATA}/Google/Chrome SxS/User Data1111`,
+    args,
+  };
+}
+
 async function main() {
   stopNotification();
   const start = performance.now();
@@ -254,7 +281,19 @@ async function main() {
   const repeat = args.repeat && args.repeat != "" ? args.repeat : 5;
   const isDryRun = args.dryRun || args.dryrun || false;
   const isFastRun = args.fastRun || args.fastrun || false;
-  await socwatch(type, info, isDryRun ? 1 : repeat, isDryRun, isFastRun);
+
+  for (const backend of ["d3d11", "d3d12"]) {
+    const browserConfig = createBrowserConfig(backend);
+    await socwatch(
+      type,
+      browserConfig,
+      info + backend,
+      isDryRun ? 1 : repeat,
+      isDryRun,
+      isFastRun
+    );
+  }
+
   const end = performance.now();
   const durationInSeconds = (end - start) / 1000;
   console.log(`Time used: ${durationInSeconds.toFixed(3)} s`);

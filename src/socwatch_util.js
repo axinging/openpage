@@ -61,7 +61,6 @@ function saveArrayToJsonSync(array, filePath) {
   }
 }
 
-
 function createTimeStampedFolder(rootFolder, prefix = "") {
   const basePath = "./";
   // Get current timestamp
@@ -245,14 +244,13 @@ function generateMarkdownTable(file) {
 
       return {
         config: configToString(item.config).toLowerCase(),
-        loop: item.loop,
         result: item.result.toFixed(2),
       };
     });
     console.table(tableData);
-    let md = "| Config | Loop | Result |\n|---------|------|--------|\n";
-    tableData.forEach(({ config, loop, result }) => {
-      md += `| ${config} | ${loop} | ${result} |\n`;
+    let md = "| Config | Result |\n|---------|------|--------|\n";
+    tableData.forEach(({ config, result }) => {
+      md += `| ${config} | ${result} |\n`;
     });
     fs.writeFileSync(changeFileExtension(file, ".md"), md);
   } catch (error) {
@@ -298,5 +296,5 @@ module.exports = {
   generateMarkdownTable,
   getRenderer,
   saveBrowserConfigToRootFolder,
-  configToString
+  configToString,
 };
